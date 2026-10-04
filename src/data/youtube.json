@@ -1,0 +1,19 @@
+{
+  "_comment": "Optional YouTube video per exercise id (from src/data/exercises.ts). The player shows a 'Watch on YouTube' button when an id is listed. Edit freely; the value is the 11-character id after v= in the video URL.",
+  "leg_press": "IZxyjW7MPJQ",
+  "goblet_squat": "MeIiIdhvXT4",
+  "dumbbell_rdl": "FQKfr1YDhEk",
+  "split_squat": "2C-uNgKwPLE",
+  "seated_leg_curl": "Orxowest56U",
+  "leg_extension": "m0FOpMEgero",
+  "chest_press_machine": "xUm0BiZCWlQ",
+  "lat_pulldown": "SALxEARiMkw",
+  "seated_cable_row": "UCXxvVItLoM",
+  "dumbbell_shoulder_press": "qEwKCR5JCog",
+  "one_arm_dumbbell_row": "DMo3HJoawrU",
+  "face_pull": "rep-qVOkqgk",
+  "triceps_pushdown": "2-LAMcpzODU",
+  "plank": "pSHjTRCQxIw",
+  "dead_bug": "4XLEnwUr1d8",
+  "pallof_press": "AH_QZLm_0-s"
+}

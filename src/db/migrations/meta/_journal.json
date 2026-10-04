@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1789095047535,
+      "tag": "0000_dapper_vulcan",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789098658548,
+      "tag": "0001_wet_ink",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789126291082,
+      "tag": "0002_big_ted_forrester",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1789129157947,
+      "tag": "0003_nappy_dexter_bennett",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789147616591,
+      "tag": "0004_grey_gauntlet",
+      "breakpoints": true
+    }
+  ]
+}

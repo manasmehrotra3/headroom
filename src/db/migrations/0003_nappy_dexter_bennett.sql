@@ -1,0 +1,1 @@
+ALTER TABLE `daily_metrics` ADD `vo2_max` real;

@@ -1,25 +1,97 @@
 {
   "expo": {
-    "name": "fitnessApp",
-    "slug": "fitnessApp",
-    "version": "1.0.0",
+    "name": "Headroom",
+    "slug": "headroom",
+    "version": "0.16.0",
+    "scheme": "headroom",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B0A10",
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.manasmehrotra.headroom",
+      "buildNumber": "19",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.manasmehrotra.headroom"
+        ]
+      }
     },
     "android": {
+      "package": "com.manasmehrotra.headroom",
+      "versionCode": 19,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0E0F12",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "minSdkVersion": 26,
+            "buildArchs": [
+              "arm64-v8a"
+            ]
+          }
+        }
+      ],
+      "./plugins/withReleaseSigning",
+      "expo-background-task",
+      "expo-sharing",
+      "react-native-health-connect",
+      "./plugins/withHealthPermissions",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Used only to scan food barcodes."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Used only to add progress photos, which stay on this phone.",
+          "cameraPermission": "Used only to take progress photos."
+        }
+      ],
+      "./plugins/withoutPushEntitlement",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#4ADE80"
+        }
+      ],
+      "./plugins/withStepsWidget",
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "Headroom reads the workouts, heart rate, sleep, steps, weight and VO2 max that Garmin Connect saves to Apple Health, to plan your training and score your recovery. It never writes to Apple Health, and nothing leaves this iPhone.",
+          "NSHealthUpdateUsageDescription": false,
+          "background": false
+        }
+      ],
+      "@bacons/apple-targets"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B0A10"
     }
   }
 }
