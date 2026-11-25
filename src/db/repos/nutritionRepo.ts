@@ -47,6 +47,11 @@ export function seedFoods(): void {
         .run();
       for (const s of f.servings) tx.insert(foodServings).values({ foodId: f.id, label: s.label, grams: s.grams, isDefault: s.isDefault }).run();
     }
+    // When a catalog update adds a large wave of new dishes, refresh unpinned upcoming meal plan
+    // rows so the user immediately sees the expanded variety without losing manually swapped meals.
+    if (missing.filter((f) => f.isDish).length >= 20) {
+      tx.delete(mealPlanItems).where(and(gte(mealPlanItems.date, todayKey()), eq(mealPlanItems.pinned, false))).run();
+    }
   });
 }
 
@@ -58,6 +63,22 @@ export function per100(f: FoodRow): Macros {
 
 export function getFood(id: string): FoodRow | undefined {
   return db.select().from(foods).where(eq(foods.id, id)).get();
+}
+
+/** Returns custom recipe ingredients (for user-created recipes) or seeded grocery items. */
+export function ingredientsForFood(foodId: string): { item: string; qty: number; unit: string }[] {
+  const custom = db.select().from(recipes).where(eq(recipes.foodId, foodId)).get();
+  if (custom) {
+    const rows = db.select().from(recipeIngredients).where(eq(recipeIngredients.recipeId, custom.id)).all();
+    const s = Math.max(1, custom.servings);
+    return rows.map((r) => {
+      const ing = getFood(r.foodId);
+      return { item: ing?.name ?? r.foodId, qty: Math.round((r.grams / s) * 10) / 10, unit: 'g' };
+    });
+  }
+  const row = getFood(foodId);
+  if (row && row.grocery.length > 0) return row.grocery;
+  return GROCERY_BY_DISH[foodId] ?? [];
 }
 
 export function servingsFor(foodId: string): ServingRow[] {
@@ -313,11 +334,21 @@ function preferences(): Preferences {
 
 export function ensureMealPlan(weekStart: DateKey, regenerate = false): void {
   const existing = db.select().from(mealPlanItems).where(eq(mealPlanItems.weekStart, weekStart)).all();
-  if (existing.length > 0 && !regenerate) return;
+  const expectedDates = weekDates(weekStart);
+  const complete = expectedDates.every((d) => existing.filter((e) => e.date === d).length >= 4);
+  if (complete && !regenerate) return;
   ensureNutritionTargets(weekStart > todayKey() ? todayKey() : weekStart);
   const dishes = allDishes();
+  const prevEnd = addDays(weekStart, -1);
+  const prevStart = addDays(weekStart, -3);
+  const recentFoodIds = db
+    .select({ foodId: mealPlanItems.foodId })
+    .from(mealPlanItems)
+    .where(and(gte(mealPlanItems.date, prevStart), lte(mealPlanItems.date, prevEnd)))
+    .all()
+    .map((r) => r.foodId);
   const seed = regenerate ? Date.now() % 100000 : Number(weekStart.replace(/-/g, '')) % 100000;
-  const plan = generateMealPlan(weekStart, dishes, preferences(), (date) => dayTargets(date) ?? latestTargets(todayKey())!, seed);
+  const plan = generateMealPlan(weekStart, dishes, preferences(), (date) => dayTargets(date) ?? latestTargets(todayKey())!, seed, recentFoodIds);
   const pinned = existing.filter((e) => e.pinned);
   db.transaction((tx) => {
     tx.delete(mealPlanItems).where(and(eq(mealPlanItems.weekStart, weekStart), eq(mealPlanItems.pinned, false))).run();

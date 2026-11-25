@@ -2,15 +2,15 @@
   "expo": {
     "name": "Headroom",
     "slug": "headroom",
-    "version": "0.17.0",
+    "version": "0.19.1",
     "scheme": "headroom",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0B0A10",
+    "backgroundColor": "#101418",
     "ios": {
       "bundleIdentifier": "com.manasmehrotra.headroom",
-      "buildNumber": "20",
+      "buildNumber": "23",
       "supportsTablet": false,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -23,7 +23,7 @@
     },
     "android": {
       "package": "com.manasmehrotra.headroom",
-      "versionCode": 20,
+      "versionCode": 23,
       "adaptiveIcon": {
         "backgroundColor": "#0E0F12",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -71,7 +71,7 @@
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#4ADE80"
+          "color": "#90CDFF"
         }
       ],
       "./plugins/withStepsWidget",
@@ -92,7 +92,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0B0A10"
+      "backgroundColor": "#101418"
     }
   }
 }

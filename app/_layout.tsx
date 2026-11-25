@@ -82,21 +82,28 @@ function App() {
   if (!updatedAt) return <Loading />;
 
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+        animation: 'slide_from_right',
+        animationDuration: 260,
+      }}
+    >
       <Stack.Protected guard={onboarded}>
-        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
         <Stack.Screen name="edit" />
         <Stack.Screen name="exercises" />
-        <Stack.Screen name="workout/[id]" />
+        <Stack.Screen name="workout/[id]" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="plan" />
         <Stack.Screen name="run" />
         <Stack.Screen name="ride" />
-        <Stack.Screen name="log" />
+        <Stack.Screen name="log" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="insights" />
         <Stack.Screen name="food" />
       </Stack.Protected>
       <Stack.Protected guard={!onboarded}>
-        <Stack.Screen name="onboarding" />
+        <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
       </Stack.Protected>
     </Stack>
   );

@@ -1,6 +1,6 @@
 /**
- * This week's sessions as a list: an icon tile per session, its name and day, and how long it
- * is. "Upcoming" hides what is behind you and rest days; "Whole week" shows all seven.
+ * This week's sessions as an M3 Expressive Segmented List with native layout transitions
+ * when toggling between "Upcoming" and "Whole week".
  */
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -19,11 +19,10 @@ const STATUS: Record<PlannedSession['status'], { label: string; tone: Tone }> = 
   done: { label: 'Done', tone: 'accent' },
   skipped: { label: 'Skipped', tone: 'warning' },
   sick: { label: 'Sick day', tone: 'warning' },
-  travel: { label: 'Travel', tone: 'neutral' },
+  travel: { label: 'Travel', tone: 'tertiary' },
   dropped: { label: 'Dropped', tone: 'danger' },
 };
 
-/** "Strength: lower body + core" -> "Lower body + core"; runs and rides use their plan's title. */
 export function shortSessionTitle(session: PlannedSession): string {
   if (session.detail.kind === 'run' || session.detail.kind === 'bike' || session.detail.kind === 'swim') return session.detail.title;
   const label = SESSION_TYPES[session.sessionType].label;
@@ -46,7 +45,7 @@ export function WeekList({ sessions, today }: { sessions: PlannedSession[]; toda
         title="This week"
         action={{
           label: upcomingOnly ? 'Upcoming' : 'Whole week',
-          icon: <SortIcon color={colors.textDim} size={18} />,
+          icon: <SortIcon color={colors.onSurfaceVariant} size={16} />,
           onPress: () => setUpcomingOnly((v) => !v),
         }}
       />
@@ -56,7 +55,7 @@ export function WeekList({ sessions, today }: { sessions: PlannedSession[]; toda
         </Card>
       ) : (
         <ListGroup>
-          {shown.map((session, i) => {
+          {shown.map((session) => {
             const kind = SESSION_TYPES[session.sessionType].kind;
             const Icon = SESSION_KIND_ICONS[kind];
             const isToday = session.date === today;
@@ -64,8 +63,7 @@ export function WeekList({ sessions, today }: { sessions: PlannedSession[]; toda
             return (
               <ListRow
                 key={session.id ?? session.date}
-                icon={<Icon color={isToday ? colors.accent : colors.text} size={22} />}
-                tileColor={isToday ? colors.accentSoft : undefined}
+                icon={<Icon color={isToday ? colors.onPrimary : colors.onSurface} size={21} />}
                 title={shortSessionTitle(session)}
                 subtitle={`${formatShortDate(session.date)} · ${KIND_NAMES[kind]}${session.variant !== 'normal' ? ` · ${session.variant}` : ''}`}
                 value={session.sessionType === 'rest' ? '—' : `${session.targetMin} min`}
@@ -73,7 +71,6 @@ export function WeekList({ sessions, today }: { sessions: PlannedSession[]; toda
                 captionTone={status.tone}
                 highlight={isToday}
                 onPress={() => router.navigate('/train')}
-                last={i === shown.length - 1}
               />
             );
           })}

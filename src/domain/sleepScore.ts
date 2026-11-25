@@ -19,7 +19,12 @@ export interface SleepComponent {
 }
 
 export interface SleepScore {
+  /** The score to show: the source's own when it sent one, otherwise `computedScore`. */
   score: number;
+  /** Headroom's own calculation, kept even when the source overrides the headline. */
+  computedScore: number;
+  /** Where `score` came from, so a screen can say so rather than leaving the two unexplained. */
+  scoreSource: 'garmin' | 'headroom';
   durationMin: number;
   asleepMin: number;
   components: {
@@ -60,8 +65,18 @@ export function stageMinutes(night: SleepNight): Map<number, number> {
  *
  * Components without data are dropped and the rest re-weighted, so a night with no stages
  * is scored from duration and consistency only.
+ *
+ * `providedScore` is the source's own score, which Garmin publishes and the phone health stores
+ * do not. When there is one it becomes the headline, because the point is to agree with what
+ * Garmin Connect shows; the breakdown below stays Headroom's own and explains the night either
+ * way. Garmin weighs sleep structure and stress, so the two numbers rarely match exactly.
  */
-export function sleepScore(night: SleepNight, targetMin: number, baseline: { bedMinutes: number; wakeMinutes: number } | null): SleepScore {
+export function sleepScore(
+  night: SleepNight,
+  targetMin: number,
+  baseline: { bedMinutes: number; wakeMinutes: number } | null,
+  providedScore: number | null = null,
+): SleepScore {
   const t = TUNABLES.sleep;
   const inBedMin = (night.endMs - night.startMs) / 60000;
   const minutes = stageMinutes(night);
@@ -112,9 +127,17 @@ export function sleepScore(night: SleepNight, targetMin: number, baseline: { bed
   const present = [duration, efficiency, stages, consistency].filter((c): c is SleepComponent => c !== null);
   const totalWeight = present.reduce((sum, c) => sum + c.weight, 0);
   const points = present.reduce((sum, c) => sum + c.points, 0);
-  const score = totalWeight > 0 ? Math.round((points / totalWeight) * 100) : 0;
+  const computedScore = totalWeight > 0 ? Math.round((points / totalWeight) * 100) : 0;
+  const usable = providedScore !== null && Number.isFinite(providedScore) ? Math.round(providedScore) : null;
 
-  return { score, durationMin: inBedMin, asleepMin, components: { duration, efficiency, stages, consistency } };
+  return {
+    score: usable ?? computedScore,
+    computedScore,
+    scoreSource: usable === null ? 'headroom' : 'garmin',
+    durationMin: inBedMin,
+    asleepMin,
+    components: { duration, efficiency, stages, consistency },
+  };
 }
 
 /** Local minutes after midnight of an epoch ms. */

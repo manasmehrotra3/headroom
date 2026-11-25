@@ -190,7 +190,7 @@ export const TUNABLES = {
     recalcEveryDays: 14,
     recalcStepKcal: 100,
     /** Meal plan: a dish can't repeat within this many days. */
-    noRepeatDays: 3,
+    noRepeatDays: 7,
     /** Fraction of daily calories per slot. */
     slotShare: { breakfast: 0.25, lunch: 0.35, snack: 0.1, dinner: 0.3 },
     /** How close (fraction) a swap must be in calories and protein. */

@@ -10,6 +10,7 @@
  * Household servings (1 roti, 1 katori, 1 cup) are typical Indian portions in grams.
  */
 import type { FoodItem, MealSlot } from '@/domain/nutrition/types';
+import { REGIONAL_GROCERY_BY_DISH, REGIONAL_INDIAN_DISHES } from './indianRegionalFoods';
 
 export interface SeedFood {
   id: string;
@@ -228,10 +229,11 @@ const DISHES: SeedFood[] = [
   { id: 'coffee_black', name: 'Black coffee', kcal100: 1, protein100: 0.1, carbs100: 0, fat100: 0, fiber100: 0, source: 'USDA', isEstimate: false, isDish: false, slots: [], tags: [], servings: [g(200, '1 cup', true)] },
 ];
 
-export const SEED_FOODS: SeedFood[] = [...INGREDIENTS, ...DISHES];
+export const SEED_FOODS: SeedFood[] = [...INGREDIENTS, ...DISHES, ...REGIONAL_INDIAN_DISHES];
 
 /** Ingredient lists (one default serving) for the grocery list. Only dishes in the meal plan need one. */
 export const GROCERY_BY_DISH: Record<string, { item: string; qty: number; unit: string }[]> = {
+  ...REGIONAL_GROCERY_BY_DISH,
   poha: [{ item: 'Poha', qty: 60, unit: 'g' }, { item: 'Peanuts', qty: 20, unit: 'g' }, { item: 'Onion', qty: 0.5, unit: 'pc' }, { item: 'Potato', qty: 0.5, unit: 'pc' }],
   upma: [{ item: 'Rava', qty: 60, unit: 'g' }, { item: 'Mixed vegetables', qty: 80, unit: 'g' }, { item: 'Onion', qty: 0.5, unit: 'pc' }],
   besan_chilla: [{ item: 'Besan', qty: 70, unit: 'g' }, { item: 'Onion', qty: 0.5, unit: 'pc' }, { item: 'Tomato', qty: 0.5, unit: 'pc' }, { item: 'Capsicum', qty: 0.5, unit: 'pc' }],

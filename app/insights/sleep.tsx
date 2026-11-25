@@ -28,7 +28,10 @@ export default function SleepInsight() {
 
         {breakdown ? (
           <>
-            <SectionLabel>Breakdown</SectionLabel>
+            {breakdown.scoreSource === 'garmin' ? (
+              <Body dim>Garmin’s own score for this night. Headroom’s calculation, broken down below, gives {breakdown.computedScore} / 100.</Body>
+            ) : null}
+            <SectionLabel>{breakdown.scoreSource === 'garmin' ? 'Headroom’s breakdown' : 'Breakdown'}</SectionLabel>
             {(Object.keys(LABELS) as (keyof typeof LABELS)[]).map((key) => {
               const c = breakdown.components[key];
               return (
@@ -41,7 +44,10 @@ export default function SleepInsight() {
                 </Card>
               );
             })}
-            <Body dim>Missing parts are left out and the rest re-weighted, so the score is always out of 100.</Body>
+            <Body dim>
+              Missing parts are left out and the rest re-weighted, so the score is always out of 100.
+              {breakdown.scoreSource === 'garmin' ? ' Garmin also weighs sleep structure and overnight stress, so its number and this one rarely match exactly.' : ''}
+            </Body>
           </>
         ) : (
           <Body dim>Connect {PHONE_HEALTH.name} (Settings → Garmin & {PHONE_HEALTH.name}) or turn on demo data to see a score.</Body>

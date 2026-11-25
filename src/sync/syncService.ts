@@ -3,7 +3,7 @@
  * recomputes the daily numbers: sleep score, readiness, training load.
  * Runs when the app opens and from the background task before the morning digest.
  */
-import { and, eq, gte, lte } from 'drizzle-orm';
+import { and, eq, gte, lte, ne } from 'drizzle-orm';
 import { Platform } from 'react-native';
 
 import { TUNABLES } from '@/config/tunables';
@@ -12,7 +12,7 @@ import { activitiesBetween, firstActivityDate, upsertActivity } from '@/db/repos
 import { linkActivitiesToSessions } from '@/db/repos/planRepo';
 import { loadProfile, loadSettings } from '@/db/repos/profileRepo';
 import { dailyMetricsBetween, getCheckin, getDailyMetrics, sleepBetween, upsertDailyMetrics, upsertSleep } from '@/db/repos/recoveryRepo';
-import { activities, bodyMeasurements, syncState } from '@/db/schema';
+import { activities, bodyMeasurements, sleepSessions, syncState } from '@/db/schema';
 import { addDays, ageInYear, toDateKey, todayKey, type DateKey } from '@/domain/dates';
 import { findDuplicates } from '@/domain/dedupe';
 import { dailyLoads, estimateMaxHr, estimateRpeFromHr, loadSummary, trimp } from '@/domain/load';
@@ -140,13 +140,20 @@ function storeSourceData(source: ActivitySource, data: SourceData): void {
   }
 
   for (const s of data.sleep) {
+    const sleepDate = toDateKey(new Date(s.endMs));
+    // After a change of source the same night arrives again under a different id, the way a
+    // weigh-in does below. Both copies would then sit in the table and compete in pickMainSleep,
+    // and the older one wins ties, so the night keeps being scored from the source you left.
+    // The source being read now is the one you chose, so its copy replaces any other source's.
+    db.delete(sleepSessions).where(and(eq(sleepSessions.date, sleepDate), ne(sleepSessions.source, source.id))).run();
     upsertSleep({
-      date: toDateKey(new Date(s.endMs)),
+      date: sleepDate,
       externalId: s.externalId,
       source: source.id,
       startedAt: new Date(s.startMs),
       endedAt: new Date(s.endMs),
       stages: s.stages,
+      sourceScore: s.score,
     });
   }
 
@@ -196,10 +203,11 @@ export function recomputeDay(date: DateKey): void {
     startMs: s.startedAt.getTime(),
     endMs: s.endedAt.getTime(),
     stages: s.stages,
+    sourceScore: s.sourceScore,
   }));
   const main = pickMainSleep(nights.filter((n) => n.date === date));
   const baseline = sleepTimingBaseline(nights.filter((n) => n.date !== date));
-  const sleep = main ? sleepScore(main, profile?.sleepTargetMin ?? t.defaults.sleepTargetMin, baseline) : null;
+  const sleep = main ? sleepScore(main, profile?.sleepTargetMin ?? t.defaults.sleepTargetMin, baseline, main.sourceScore) : null;
 
   // Readiness: today's signals vs baselines that exclude today.
   const today = getDailyMetrics(date);

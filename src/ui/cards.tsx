@@ -1,24 +1,38 @@
 /**
- * The card kit for dashboard-style screens: stat cards that page sideways in pairs, small status
- * chips, a segmented range control, section headers with a control on the right, and list rows
- * with an icon tile.
+ * Material 3 Expressive dashboard kit:
+ * - Tonal StatCards (with optional ScallopBadge hero & animated micro-progress bars)
+ * - Spring-animated PagerDots
+ * - Shape-morphing SegmentedControl (via ConnectedButtonGroup)
+ * - M3 1.5.0 Segmented ListGroup & ListRow with native layout transitions
  */
-import { useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import { Children, cloneElement, isValidElement, useEffect, useState, type ReactElement, type ReactNode } from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
-import { CheckIcon, InfoIcon } from './icons';
+import { AnimatedLinearBar, ConnectedButtonGroup, ScallopBadge, segmentedCorners } from './expressive';
+import { InfoIcon } from './icons';
+import { EXPRESSIVE_SPRING, M3_LAYOUT, M3Pressable } from './motion';
 import { colors, font, radius, space } from './theme';
 
-export type Tone = 'neutral' | 'accent' | 'warning' | 'danger';
+export type Tone = 'neutral' | 'accent' | 'tertiary' | 'warning' | 'danger';
 
 const TONE_STYLES: Record<Tone, { backgroundColor: string; color: string }> = {
-  neutral: { backgroundColor: colors.surfaceRaised, color: colors.textDim },
-  accent: { backgroundColor: colors.accentSoft, color: colors.accent },
-  warning: { backgroundColor: colors.warningSoft, color: colors.warning },
-  danger: { backgroundColor: colors.dangerSoft, color: colors.danger },
+  neutral: { backgroundColor: colors.secondaryContainer, color: colors.onSecondaryContainer },
+  accent: { backgroundColor: colors.primaryContainer, color: colors.onPrimaryContainer },
+  tertiary: { backgroundColor: colors.tertiaryContainer, color: colors.onTertiaryContainer },
+  warning: { backgroundColor: colors.warningContainer, color: colors.onWarningContainer },
+  danger: { backgroundColor: colors.errorContainer, color: colors.onErrorContainer },
 };
 
-/** A small status label, e.g. "Sweet spot" or "5 upcoming". Not tappable. */
+/** Small tonal M3 status pill, e.g. "Sweet spot" or "Good". */
 export function Chip({ label, tone = 'neutral' }: { label: string; tone?: Tone }) {
   const { backgroundColor, color } = TONE_STYLES[tone];
   return (
@@ -30,13 +44,28 @@ export function Chip({ label, tone = 'neutral' }: { label: string; tone?: Tone }
   );
 }
 
-/** Which page you are on: a dash for the current one, dots for the rest. */
+function AnimatedDot({ active }: { active: boolean }) {
+  const width = useSharedValue(active ? 20 : 6);
+
+  useEffect(() => {
+    width.value = withSpring(active ? 20 : 6, EXPRESSIVE_SPRING);
+  }, [active, width]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    width: width.value,
+    backgroundColor: active ? colors.primary : colors.outlineVariant,
+  }));
+
+  return <Animated.View style={[styles.dotBase, animStyle]} />;
+}
+
+/** Spring-morphing pager dots: active dot stretches smoothly into a pill. */
 export function PagerDots({ count, index }: { count: number; index: number }) {
   if (count <= 1) return null;
   return (
     <View style={styles.dots}>
       {Array.from({ length: count }, (_, i) => (
-        <View key={i} style={i === index ? styles.dash : styles.dot} />
+        <AnimatedDot key={i} active={i === index} />
       ))}
     </View>
   );
@@ -45,45 +74,86 @@ export function PagerDots({ count, index }: { count: number; index: number }) {
 export interface StatCardProps {
   label: string;
   value: string;
-  /** Small text after the value, e.g. "lb". */
+  /** Small text after the value, e.g. "/ 2,250". */
   unit?: string;
   valueColor?: string;
   chip?: { label: string; tone?: Tone };
+  /** Renders the metric inside an M3 Expressive scallop/cookie badge (e.g. Readiness). */
+  scallop?: boolean;
+  /** Optional 0–1 animated micro progress bar under the value (e.g. Calories / Protein). */
+  progress?: number;
+  progressColor?: string;
   onPress?: () => void;
 }
 
-/** Label with an info icon, a big number, and a chip underneath. */
-export function StatCard({ label, value, unit, valueColor, chip, onPress, pager }: StatCardProps & { pager?: { count: number; index: number } }) {
+/** Tonal M3 Expressive stat card with optional scallop badge or animated progress bar. */
+export function StatCard({
+  label,
+  value,
+  unit,
+  valueColor,
+  chip,
+  scallop,
+  progress,
+  progressColor,
+  onPress,
+  pager,
+}: StatCardProps & { pager?: { count: number; index: number } }) {
+  const badgeTone = chip?.tone ?? 'accent';
+  const badgeStyle = TONE_STYLES[badgeTone];
+
   return (
-    <Pressable
+    <M3Pressable
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={`${label}: ${value}${unit ? ` ${unit}` : ''}`}
       onPress={onPress}
       disabled={!onPress}
-      style={({ pressed }) => [styles.statCard, pressed && { backgroundColor: colors.surfaceRaised }]}
+      haptic="tap"
+      scaleTo={0.965}
+      style={styles.statCard}
     >
       <View style={styles.statTop}>
         <Text style={styles.statLabel} numberOfLines={1}>
           {label}
         </Text>
-        {onPress ? <InfoIcon color={colors.textDim} size={19} /> : null}
+        {onPress ? <InfoIcon color={colors.onSurfaceVariant} size={17} /> : null}
       </View>
-      <Text style={[styles.statValue, valueColor ? { color: valueColor } : null]} numberOfLines={1} adjustsFontSizeToFit>
-        {value}
-        {unit ? <Text style={styles.statUnit}> {unit}</Text> : null}
-      </Text>
+
+      {scallop ? (
+        <View style={{ marginVertical: 4 }}>
+          <ScallopBadge
+            label={value}
+            size={56}
+            backgroundColor={badgeStyle.backgroundColor}
+            textColor={badgeStyle.color}
+          />
+        </View>
+      ) : (
+        <Text
+          style={[styles.statValue, valueColor ? { color: valueColor } : null]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
+          {value}
+          {unit ? <Text style={styles.statUnit}> {unit}</Text> : null}
+        </Text>
+      )}
+
+      {progress !== undefined ? (
+        <View style={{ marginBottom: 8 }}>
+          <AnimatedLinearBar progress={progress} color={progressColor ?? colors.primary} height={6} />
+        </View>
+      ) : null}
+
       <View style={styles.statBottom}>
         {chip ? <Chip label={chip.label} tone={chip.tone} /> : <View />}
         {pager ? <PagerDots count={pager.count} index={pager.index} /> : null}
       </View>
-    </Pressable>
+    </M3Pressable>
   );
 }
 
-/**
- * Stat cards two to a page, swiped sideways. Every card shows the same page indicator so it is
- * obvious there is more to the right.
- */
+/** Stat cards two to a page, swiped sideways with spring-morphing page indicators. */
 export function PagedStatCards({ pages }: { pages: [StatCardProps, StatCardProps][] }) {
   const [width, setWidth] = useState(0);
   const [page, setPage] = useState(0);
@@ -96,7 +166,13 @@ export function PagedStatCards({ pages }: { pages: [StatCardProps, StatCardProps
   return (
     <View onLayout={onLayout} style={{ marginBottom: space.md }}>
       {width > 0 ? (
-        <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={onScrollEnd} decelerationRate="fast">
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={onScrollEnd}
+          decelerationRate="fast"
+        >
           {pages.map((pair, i) => (
             <View key={i} style={[styles.page, { width }]}>
               {pair.map((card) => (
@@ -120,45 +196,48 @@ export function StatPair({ left, right }: { left: StatCardProps; right: StatCard
   );
 }
 
-/** An outlined pill of options; the chosen one is filled and ticked. */
-export function SegmentedControl<T extends string>({ options, value, onChange }: { options: readonly { id: T; label: string }[]; value: T; onChange: (id: T) => void }) {
-  return (
-    <View style={styles.segmented}>
-      {options.map((option) => {
-        const on = option.id === value;
-        return (
-          <Pressable
-            key={option.id}
-            accessibilityRole="button"
-            accessibilityState={{ selected: on }}
-            onPress={() => onChange(option.id)}
-            style={[styles.segment, on && styles.segmentOn]}
-          >
-            {on ? <CheckIcon color="#FFFFFF" size={14} /> : null}
-            <Text style={[styles.segmentText, on && { color: '#FFFFFF' }]}>{option.label}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
+/** M3 Expressive Connected Button Group with shape-morphing corners on active selection. */
+export function SegmentedControl<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: readonly { id: T; label: string }[];
+  value: T;
+  onChange: (id: T) => void;
+}) {
+  return <ConnectedButtonGroup options={options} value={value} onChange={onChange} size="compact" />;
 }
 
-/** A big section title with an optional control on the right, like "Upcoming ↓". */
-export function SectionHeader({ title, action }: { title: string; action?: { label: string; icon?: ReactNode; onPress: () => void } }) {
+/** Section heading with an optional tonal pill action on the right. */
+export function SectionHeader({
+  title,
+  action,
+}: {
+  title: string;
+  action?: { label: string; icon?: ReactNode; onPress: () => void };
+}) {
   return (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
       {action ? (
-        <Pressable accessibilityRole="button" onPress={action.onPress} style={styles.sectionAction} hitSlop={12}>
+        <M3Pressable
+          accessibilityRole="button"
+          onPress={action.onPress}
+          haptic="tap"
+          scaleTo={0.94}
+          style={styles.sectionAction}
+          hitSlop={8}
+        >
           <Text style={styles.sectionActionText}>{action.label}</Text>
           {action.icon}
-        </Pressable>
+        </M3Pressable>
       ) : null}
     </View>
   );
 }
 
-/** A list row: icon tile, title and subtitle, and a value with a caption on the right. */
+/** M3 Expressive Segmented List row with tonal icon well and rounded outer/inner corners. */
 export function ListRow({
   icon,
   tileColor,
@@ -169,7 +248,8 @@ export function ListRow({
   captionTone = 'neutral',
   highlight,
   onPress,
-  last,
+  first = false,
+  last = false,
 }: {
   icon: ReactNode;
   tileColor?: string;
@@ -180,76 +260,138 @@ export function ListRow({
   captionTone?: Tone;
   highlight?: boolean;
   onPress?: () => void;
+  first?: boolean;
   last?: boolean;
 }) {
+  const captionColor = highlight ? colors.onPrimaryContainer : TONE_STYLES[captionTone].color;
+
   return (
-    <Pressable
-      accessibilityRole={onPress ? 'button' : undefined}
-      onPress={onPress}
-      disabled={!onPress}
-      style={({ pressed }) => [styles.listRow, !last && styles.listRowDivider, highlight && styles.listRowHighlight, pressed && { backgroundColor: colors.surfaceRaised }]}
-    >
-      <View style={[styles.tile, tileColor ? { backgroundColor: tileColor } : null]}>{icon}</View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.rowTitle} numberOfLines={1}>
-          {title}
-        </Text>
-        {subtitle ? (
-          <Text style={styles.rowSubtitle} numberOfLines={1}>
-            {subtitle}
+    <Animated.View layout={M3_LAYOUT}>
+      <M3Pressable
+        accessibilityRole={onPress ? 'button' : undefined}
+        onPress={onPress}
+        disabled={!onPress}
+        haptic="tap"
+        scaleTo={0.975}
+        style={[
+          styles.listRow,
+          segmentedCorners(first, last),
+          highlight && styles.listRowHighlight,
+        ]}
+      >
+        <View
+          style={[
+            styles.tile,
+            highlight ? { backgroundColor: colors.primary } : tileColor ? { backgroundColor: tileColor } : null,
+          ]}
+        >
+          {icon}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.rowTitle, highlight && { color: colors.onPrimaryContainer }]} numberOfLines={1}>
+            {title}
           </Text>
-        ) : null}
-      </View>
-      <View style={{ alignItems: 'flex-end' }}>
-        {value ? <Text style={styles.rowValue}>{value}</Text> : null}
-        {caption ? <Text style={[styles.rowCaption, { color: TONE_STYLES[captionTone].color }]}>{caption}</Text> : null}
-      </View>
-    </Pressable>
+          {subtitle ? (
+            <Text style={[styles.rowSubtitle, highlight && { color: colors.onPrimaryContainer, opacity: 0.82 }]} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          {value ? <Text style={[styles.rowValue, highlight && { color: colors.onPrimaryContainer }]}>{value}</Text> : null}
+          {caption ? <Text style={[styles.rowCaption, { color: captionColor }]}>{caption}</Text> : null}
+        </View>
+      </M3Pressable>
+    </Animated.View>
   );
 }
 
-/** The rounded container a group of list rows sits in. */
+/** M3 Expressive Segmented List container: automatically assigns 24px outer / 6px inner corners. */
 export function ListGroup({ children }: { children: ReactNode }) {
-  return <View style={styles.listGroup}>{children}</View>;
+  const valid = Children.toArray(children).filter((child): child is ReactElement<{ first?: boolean; last?: boolean }> => isValidElement(child));
+  return (
+    <Animated.View layout={M3_LAYOUT} style={styles.listGroup}>
+      {valid.map((child, idx) =>
+        cloneElement(child, {
+          first: idx === 0,
+          last: idx === valid.length - 1,
+        }),
+      )}
+    </Animated.View>
+  );
 }
 
 const styles = StyleSheet.create({
-  chip: { alignSelf: 'flex-start', borderRadius: radius.sm, paddingHorizontal: 10, paddingVertical: 5, maxWidth: '100%' },
-  chipText: { fontSize: font.small, fontWeight: '600' },
-  dots: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  dash: { width: 16, height: 5, borderRadius: 3, backgroundColor: colors.accentDim },
-  dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.border },
+  chip: {
+    alignSelf: 'flex-start',
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    maxWidth: '100%',
+  },
+  chipText: { fontSize: font.small - 1, fontWeight: '700' },
+  dots: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  dotBase: { height: 6, borderRadius: 99 },
   page: { flexDirection: 'row', gap: space.md },
   statCard: {
     flex: 1,
-    minHeight: 148,
+    minHeight: 152,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: radius.xl,
     padding: space.lg,
     justifyContent: 'space-between',
   },
   statTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.xs },
-  statLabel: { color: colors.textDim, fontSize: font.body, fontWeight: '500', flexShrink: 1 },
-  statValue: { color: colors.text, fontSize: 34, fontWeight: '700', letterSpacing: -0.5, marginVertical: space.sm },
-  statUnit: { color: colors.textDim, fontSize: font.body, fontWeight: '500', letterSpacing: 0 },
+  statLabel: { color: colors.onSurfaceVariant, fontSize: font.small + 1, fontWeight: '600', flexShrink: 1 },
+  statValue: {
+    color: colors.onSurface,
+    fontSize: 34,
+    fontWeight: '800',
+    letterSpacing: -0.6,
+    marginVertical: space.xs,
+    fontVariant: ['tabular-nums'],
+  },
+  statUnit: { color: colors.onSurfaceVariant, fontSize: font.small + 1, fontWeight: '500', letterSpacing: 0 },
   statBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.xs },
-  segmented: { flexDirection: 'row', borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
-  segment: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 14, minHeight: 38 },
-  segmentOn: { backgroundColor: colors.accentDim },
-  segmentText: { color: colors.textDim, fontSize: font.small, fontWeight: '600' },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: space.xl, marginBottom: space.md },
-  sectionTitle: { color: colors.text, fontSize: font.title, fontWeight: '700' },
-  sectionAction: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  sectionActionText: { color: colors.textDim, fontSize: font.body },
-  listGroup: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', marginBottom: space.md },
-  listRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.lg, paddingVertical: space.md, minHeight: 72 },
-  listRowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-  listRowHighlight: { backgroundColor: colors.accentSoft },
-  tile: { width: 46, height: 46, borderRadius: radius.md, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
-  rowTitle: { color: colors.text, fontSize: font.large, fontWeight: '600' },
-  rowSubtitle: { color: colors.textDim, fontSize: font.small, marginTop: 2 },
-  rowValue: { color: colors.text, fontSize: font.large, fontWeight: '700' },
-  rowCaption: { fontSize: font.small, marginTop: 2 },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: space.xl,
+    marginBottom: space.md,
+  },
+  sectionTitle: { color: colors.onSurface, fontSize: font.title - 2, fontWeight: '800', letterSpacing: -0.2 },
+  sectionAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.surfaceHigh,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+  },
+  sectionActionText: { color: colors.onSurfaceVariant, fontSize: font.small, fontWeight: '600' },
+  listGroup: { gap: 3, marginBottom: space.md },
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md + 2,
+    minHeight: 74,
+    backgroundColor: colors.surface,
+  },
+  listRowHighlight: { backgroundColor: colors.primaryContainer },
+  tile: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceHighest,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowTitle: { color: colors.onSurface, fontSize: font.body + 1, fontWeight: '700' },
+  rowSubtitle: { color: colors.onSurfaceVariant, fontSize: font.small, marginTop: 2 },
+  rowValue: { color: colors.onSurface, fontSize: font.body + 1, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  rowCaption: { fontSize: font.small - 1, fontWeight: '600', marginTop: 2 },
 });

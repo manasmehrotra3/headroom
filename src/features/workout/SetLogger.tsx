@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { rirToRpe, rpeToRir } from '@/domain/strength/progression';
 import type { Exercise } from '@/domain/strength/types';
 import { kgToLb, lbToKg, roundTo } from '@/domain/units';
 import { Button, Stepper } from '@/ui/components';
+import { ConnectedButtonGroup } from '@/ui/expressive';
+import { M3Pressable, hapticSuccess } from '@/ui/motion';
 import { colors, font, radius, space } from '@/ui/theme';
 
 export interface SetInput {
@@ -18,8 +20,8 @@ const RPE_OPTIONS = [6, 7, 8, 9, 10];
 const RIR_OPTIONS = [4, 3, 2, 1, 0];
 
 /**
- * Big steppers for one set. `prefill` comes from the last set (this session, then last session,
- * then the suggestion) so between sets you usually just tap Log.
+ * Big M3 Expressive steppers + shape-morphing ConnectedButtonGroup for RPE/RIR.
+ * Designed for 1-handed sweaty-hand gym logging.
  */
 export function SetLogger({
   exercise,
@@ -46,7 +48,6 @@ export function SetLogger({
   const [note, setNote] = useState('');
   const [showNote, setShowNote] = useState(false);
 
-  // A new set (or a swapped exercise) gets fresh prefills.
   useEffect(() => {
     setWeightLb(roundTo(kgToLb(prefill.weightKg), 0.5));
     setRepCount(prefill.reps);
@@ -57,6 +58,13 @@ export function SetLogger({
   const isTime = exercise.loadType === 'time';
   const hasWeight = exercise.loadType === 'weight';
   const step = exercise.incrementLb > 0 ? exercise.incrementLb : 2.5;
+
+  const rawOptions = effortScale === 'rpe' ? RPE_OPTIONS : RIR_OPTIONS;
+  const effortOptions = rawOptions.map((option) => ({
+    id: String(effortScale === 'rpe' ? option : rirToRpe(option)),
+    label: String(option),
+  }));
+  const warnIds = rpeCap !== null ? effortOptions.filter((o) => Number(o.id) > rpeCap).map((o) => o.id) : undefined;
 
   return (
     <View style={styles.card}>
@@ -88,25 +96,17 @@ export function SetLogger({
 
       <Text style={styles.fieldLabel}>
         {effortScale === 'rpe' ? 'How hard (RPE)' : 'Reps in reserve'}
-        {rpeCap !== null ? `  ·  keep it at RPE ≤ ${rpeCap} today` : ''}
+        {rpeCap !== null ? `  ·  keep at RPE ≤ ${rpeCap}` : ''}
       </Text>
-      <View style={styles.chips}>
-        {(effortScale === 'rpe' ? RPE_OPTIONS : RIR_OPTIONS).map((option) => {
-          const value = effortScale === 'rpe' ? option : rirToRpe(option);
-          const on = value === rpe;
-          const overCap = rpeCap !== null && value > rpeCap;
-          return (
-            <Pressable
-              key={option}
-              onPress={() => setRpe(value)}
-              style={[styles.chip, on && styles.chipOn, overCap && !on && styles.chipWarn]}
-              accessibilityLabel={`${effortScale === 'rpe' ? 'RPE' : 'RIR'} ${option}`}
-            >
-              <Text style={[styles.chipText, on && { color: colors.accentText }]}>{option}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+
+      <ConnectedButtonGroup
+        options={effortOptions}
+        value={String(rpe)}
+        onChange={(id) => setRpe(Number(id))}
+        size="large"
+        warnIds={warnIds}
+      />
+
       <Text style={styles.hint}>
         {effortScale === 'rpe'
           ? 'RPE 8 = 2 reps left in the tank · 10 = nothing left'
@@ -118,33 +118,49 @@ export function SetLogger({
           value={note}
           onChangeText={setNote}
           placeholder="Note (optional): seat 4, felt easy…"
-          placeholderTextColor={colors.textDim}
+          placeholderTextColor={colors.outline}
           style={styles.note}
         />
       ) : (
-        <Pressable onPress={() => setShowNote(true)} style={styles.noteToggle}>
-          <Text style={styles.hint}>+ add a note</Text>
-        </Pressable>
+        <M3Pressable onPress={() => setShowNote(true)} haptic="tap" style={styles.noteToggle}>
+          <Text style={styles.noteToggleText}>+ Add a note</Text>
+        </M3Pressable>
       )}
 
       <Button
         label={`Log set ${setNumber}`}
-        onPress={() => onLog({ weightKg: hasWeight ? lbToKg(weightLb) : 0, reps: repCount, rpe, note: note.trim() })}
+        onPress={() => {
+          hapticSuccess();
+          onLog({ weightKg: hasWeight ? lbToKg(weightLb) : 0, reps: repCount, rpe, note: note.trim() });
+        }}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: space.lg, marginBottom: space.md },
-  heading: { color: colors.text, fontSize: font.body, fontWeight: '600', marginBottom: space.md },
-  fieldLabel: { color: colors.textDim, fontSize: font.small, marginBottom: space.xs },
-  chips: { flexDirection: 'row', gap: space.sm },
-  chip: { flex: 1, minHeight: 56, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
-  chipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  chipWarn: { borderColor: colors.warning },
-  chipText: { color: colors.text, fontSize: font.title, fontWeight: '600' },
-  hint: { color: colors.textDim, fontSize: font.small, marginTop: space.xs, marginBottom: space.md },
-  note: { minHeight: 48, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, color: colors.text, paddingHorizontal: space.md, marginBottom: space.md, fontSize: font.body },
-  noteToggle: { alignSelf: 'flex-start' },
+  card: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: space.lg, marginBottom: space.md },
+  heading: { color: colors.onSurfaceVariant, fontSize: font.small + 1, fontWeight: '700', marginBottom: space.md },
+  fieldLabel: { color: colors.onSurfaceVariant, fontSize: font.small, fontWeight: '600', marginBottom: space.xs },
+  hint: { color: colors.onSurfaceVariant, fontSize: font.small - 1, marginTop: space.sm, marginBottom: space.md },
+  note: {
+    minHeight: 50,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.surfaceLow,
+    color: colors.onSurface,
+    paddingHorizontal: space.md,
+    marginBottom: space.md,
+    fontSize: font.body,
+  },
+  noteToggle: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.surfaceHigh,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    marginBottom: space.md,
+  },
+  noteToggleText: { color: colors.onSurfaceVariant, fontSize: font.small, fontWeight: '600' },
 });

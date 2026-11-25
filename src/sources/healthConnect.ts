@@ -300,6 +300,7 @@ export const healthConnectSource: ActivitySource = {
           startMs: Date.parse(s.startTime),
           endMs: Date.parse(s.endTime),
           stages: (s.stages ?? []).map((st) => ({ start: Date.parse(st.startTime), end: Date.parse(st.endTime), stage: st.stage })),
+          score: null,
         });
       }
       for (const w of weights) {

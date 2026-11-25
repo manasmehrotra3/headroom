@@ -127,6 +127,18 @@ describe('mapSleep', () => {
     }
   });
 
+  it('carries Garmin’s own sleep score, which becomes the one the app shows', () => {
+    for (const [i, raw] of sleepSummaries.entries()) {
+      expect(nights[i].score).toBe(raw.sleepScores.overall.value);
+    }
+  });
+
+  it('leaves the score null when Garmin sends no sleepScores block', () => {
+    const [night] = mapSleep([{ ...sleepSummaries[0], sleepScores: undefined }]);
+    expect(night.score).toBeNull();
+    expect(night.stages.length).toBeGreaterThan(0);
+  });
+
   it('lays the stage blocks end to end inside the night', () => {
     for (const night of nights) {
       let cursor = night.startMs;
@@ -145,7 +157,7 @@ describe('mapSleep', () => {
       { calendarDate: '2026-12-01', sleepStartTimestampGMT: 1000, sleepEndTimestampGMT: 5000 },
       { calendarDate: '2026-12-02', sleepStartTimestampGMT: null, sleepEndTimestampGMT: null },
     ]);
-    expect(list).toEqual([{ externalId: 'garmin:sleep:2026-12-01', startMs: 1000, endMs: 5000, stages: [] }]);
+    expect(list).toEqual([{ externalId: 'garmin:sleep:2026-12-01', startMs: 1000, endMs: 5000, stages: [], score: null }]);
   });
 });
 

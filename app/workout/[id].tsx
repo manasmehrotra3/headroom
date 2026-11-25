@@ -4,6 +4,7 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TUNABLES } from '@/config/tunables';
@@ -25,7 +26,9 @@ import { WorkoutSummary } from '@/features/workout/WorkoutSummary';
 import { useActiveWorkout } from '@/stores/activeWorkout';
 import { cancelRestNotification, scheduleRestNotification } from '@/sync/notifications';
 import { Body, Button, Card } from '@/ui/components';
+import { AnimatedLinearBar, segmentedCorners } from '@/ui/expressive';
 import { formatLb } from '@/ui/format';
+import { M3_LAYOUT, M3Pressable } from '@/ui/motion';
 import { colors, font, radius, space, TAP_MIN } from '@/ui/theme';
 
 export default function WorkoutPlayer() {
@@ -71,6 +74,9 @@ export default function WorkoutPlayer() {
   const elapsedSec = workout ? (now - workout.startedAt.getTime()) / 1000 : 0;
   const capSec = TUNABLES.schedule.dailyCapMin * 60;
 
+  const totalPlannedSets = plan.reduce((sum, p) => sum + p.sets, 0);
+  const sessionProgress = totalPlannedSets > 0 ? Math.min(1, sets.length / totalPlannedSets) : 0;
+
   const remaining: RemainingWork[] = plan.map((p) => {
     const exercise = getExercise(p.exerciseId);
     return {
@@ -84,19 +90,19 @@ export default function WorkoutPlayer() {
   const remainingSec = estimateRemainingSec(remaining);
   const drops = useMemo(() => suggestDrops(remaining, elapsedSec, capSec), [remaining, elapsedSec, capSec]);
 
-  // Suggested weight from previous sessions of this exercise (double progression).
   const suggestion = useMemo(() => {
     if (!entry) return null;
     const exercise = getExercise(entry.exerciseId);
     const history = exerciseHistory(entry.exerciseId, workoutId).map((h) => ({ sets: h.sets }));
     return { exercise, history, ...suggestWeight(exercise, entry.reps, history) };
-    // sets.length re-runs this after a swap/log so history stays fresh.
   }, [entry?.exerciseId, entry?.reps, workoutId, sets.length]);
 
   if (!workout || !suggestion) {
     return (
       <SafeAreaView style={styles.screen}>
-        <Body dim>Loading…</Body>
+        <View style={styles.content}>
+          <Body dim>Loading…</Body>
+        </View>
       </SafeAreaView>
     );
   }
@@ -149,7 +155,6 @@ export default function WorkoutPlayer() {
     logSet({ workoutId, exerciseId: entry.exerciseId, setIndex: doneSets.length, ...input });
     const isLastSet = setNumber >= entry.sets;
     if (isLastSet) {
-      // Move on; the next exercise's first set follows the rest.
       setIndex(null);
     }
     startRest(entry.restSec, nextUp);
@@ -200,32 +205,40 @@ export default function WorkoutPlayer() {
     ]);
 
   const projectedOver = elapsedSec + remainingSec - capSec;
+  const swapList = swapFor ? swapOptions(exercise, context) : [];
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      {/* Session header: timer vs cap, progress. */}
-      <View style={styles.header}>
-        <Pressable onPress={confirmAbandon} hitSlop={12}>
-          <Text style={styles.headerDim}>✕ Leave</Text>
-        </Pressable>
-        <Text style={[styles.headerTime, projectedOver > 0 && { color: colors.warning }]}>
-          {formatDuration(elapsedSec)} <Text style={styles.headerDim}>/ {TUNABLES.schedule.dailyCapMin}:00</Text>
-        </Text>
-        <Text style={styles.headerDim}>
-          {current + 1} / {plan.length}
-        </Text>
+      {/* M3 Top Bar with tabular timer pill & continuous animated progress bar */}
+      <View style={styles.headerWrap}>
+        <View style={styles.header}>
+          <M3Pressable onPress={confirmAbandon} haptic="tap" style={styles.leavePill}>
+            <Text style={styles.leaveText}>✕ Leave</Text>
+          </M3Pressable>
+          <View style={[styles.timerPill, projectedOver > 0 && { backgroundColor: colors.warningContainer }]}>
+            <Text style={[styles.headerTime, projectedOver > 0 && { color: colors.onWarningContainer }]}>
+              {formatDuration(elapsedSec)} <Text style={styles.headerCap}>/ {TUNABLES.schedule.dailyCapMin}:00</Text>
+            </Text>
+          </View>
+          <Text style={styles.headerCount}>
+            {current + 1} / {plan.length}
+          </Text>
+        </View>
+        <AnimatedLinearBar progress={sessionProgress} color={colors.primary} trackColor={colors.surfaceHighest} height={5} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         {restEndsAt !== null ? <RestTimer /> : null}
 
         {projectedOver > TUNABLES.strength.overCapWarnMin * 60 && drops.length > 0 && restEndsAt === null ? (
-          <Card style={{ borderColor: colors.warning }}>
-            <Text style={{ color: colors.warning, fontSize: font.body, fontWeight: '600' }}>
+          <Card style={{ backgroundColor: colors.warningContainer }}>
+            <Text style={{ color: colors.onWarningContainer, fontSize: font.body, fontWeight: '700' }}>
               Running about {Math.ceil(projectedOver / 60)} min over the {TUNABLES.schedule.dailyCapMin}-min cap
             </Text>
-            <Body dim>Suggested: {drops.map((d) => `drop ${d.setsToDrop} set${d.setsToDrop > 1 ? 's' : ''} of ${d.name}`).join(', ')}.</Body>
-            <Button variant="secondary" label="Apply and keep going" onPress={applyDrops} />
+            <Text style={{ color: colors.onWarningContainer, opacity: 0.85, fontSize: font.small }}>
+              Suggested: {drops.map((d) => `drop ${d.setsToDrop} set${d.setsToDrop > 1 ? 's' : ''} of ${d.name}`).join(', ')}.
+            </Text>
+            <Button variant="primary" label="Apply and keep going" onPress={applyDrops} />
           </Card>
         ) : null}
 
@@ -242,16 +255,18 @@ export default function WorkoutPlayer() {
         <ExerciseInfo exercise={exercise} compact />
 
         {doneSets.length > 0 ? (
-          <View style={styles.done}>
+          <Animated.View layout={M3_LAYOUT} style={styles.doneStack}>
             {doneSets.map((s) => (
-              <Text key={s.id} style={styles.doneText}>
-                Set {s.setIndex + 1}: {exercise.loadType === 'weight' ? `${formatLb(s.weightKg, 1).replace('.0 lb', ' lb')} × ` : ''}
-                {s.reps}
-                {exercise.loadType === 'time' ? ' s' : ''} · RPE {s.rpe}
-                {s.note ? ` · ${s.note}` : ''}
-              </Text>
+              <View key={s.id} style={styles.donePill}>
+                <Text style={styles.doneText}>
+                  ✓ Set {s.setIndex + 1}: {exercise.loadType === 'weight' ? `${formatLb(s.weightKg, 1).replace('.0 lb', ' lb')} × ` : ''}
+                  {s.reps}
+                  {exercise.loadType === 'time' ? ' s' : ''} · RPE {s.rpe}
+                  {s.note ? ` · ${s.note}` : ''}
+                </Text>
+              </View>
             ))}
-          </View>
+          </Animated.View>
         ) : null}
 
         {setNumber <= entry.sets ? (
@@ -270,40 +285,53 @@ export default function WorkoutPlayer() {
         )}
 
         <View style={styles.actions}>
-          <Pressable onPress={() => setSwapFor(exercise)} style={styles.action}>
+          <M3Pressable onPress={() => setSwapFor(exercise)} haptic="tap" style={styles.action}>
             <Text style={styles.actionText}>Swap</Text>
-          </Pressable>
-          <Pressable onPress={skipExercise} style={styles.action}>
-            <Text style={styles.actionText}>Skip exercise</Text>
-          </Pressable>
+          </M3Pressable>
+          <M3Pressable onPress={skipExercise} haptic="tap" style={styles.action}>
+            <Text style={styles.actionText}>Skip</Text>
+          </M3Pressable>
           {current > 0 ? (
-            <Pressable onPress={() => setIndex(current - 1)} style={styles.action}>
+            <M3Pressable onPress={() => setIndex(current - 1)} haptic="select" style={styles.action}>
               <Text style={styles.actionText}>‹ Prev</Text>
-            </Pressable>
+            </M3Pressable>
           ) : null}
           {nextEntry ? (
-            <Pressable onPress={() => setIndex(current + 1)} style={styles.action}>
+            <M3Pressable onPress={() => setIndex(current + 1)} haptic="select" style={styles.action}>
               <Text style={styles.actionText}>Next ›</Text>
-            </Pressable>
+            </M3Pressable>
           ) : null}
         </View>
-        <Pressable onPress={() => setShowSummary(true)} style={{ alignSelf: 'center', paddingVertical: space.md }}>
-          <Text style={styles.headerDim}>Finish session early</Text>
-        </Pressable>
+
+        <M3Pressable onPress={() => setShowSummary(true)} haptic="tap" style={{ alignSelf: 'center', paddingVertical: space.md }}>
+          <Text style={styles.finishEarly}>Finish session early</Text>
+        </M3Pressable>
       </ScrollView>
 
-      <Modal visible={swapFor !== null} transparent animationType="slide" onRequestClose={() => setSwapFor(null)}>
-        <Pressable style={styles.backdrop} onPress={() => setSwapFor(null)} />
-        <View style={styles.sheet}>
-          <Text style={styles.sheetTitle}>Swap {exercise.name} for…</Text>
-          {swapOptions(exercise, context).map((option) => (
-            <Pressable key={option.id} onPress={() => applySwap(option)} style={styles.option}>
-              <Text style={styles.optionName}>{option.name}</Text>
-              <Text style={styles.headerDim}>{option.station}</Text>
-            </Pressable>
-          ))}
-          {swapOptions(exercise, context).length === 0 ? <Body dim>No alternative fits your equipment and today's pain areas.</Body> : null}
-          <Button variant="secondary" label="Cancel" onPress={() => setSwapFor(null)} />
+      <Modal visible={swapFor !== null} transparent animationType="none" onRequestClose={() => setSwapFor(null)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <Animated.View entering={FadeIn.duration(180)} style={styles.backdrop}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => setSwapFor(null)} />
+          </Animated.View>
+          <Animated.View entering={SlideInDown.springify().damping(20).stiffness(240)} style={styles.sheet}>
+            <View style={styles.handle} />
+            <Text style={styles.sheetTitle}>Swap {exercise.name} for…</Text>
+            <View style={{ gap: 3 }}>
+              {swapList.map((option, i) => (
+                <M3Pressable
+                  key={option.id}
+                  onPress={() => applySwap(option)}
+                  haptic="select"
+                  style={[styles.option, segmentedCorners(i === 0, i === swapList.length - 1)]}
+                >
+                  <Text style={styles.optionName}>{option.name}</Text>
+                  <Text style={styles.optionSub}>{option.station}</Text>
+                </M3Pressable>
+              ))}
+            </View>
+            {swapList.length === 0 ? <Body dim>No alternative fits your equipment and today's pain areas.</Body> : null}
+            <Button variant="secondary" label="Cancel" onPress={() => setSwapFor(null)} />
+          </Animated.View>
         </View>
       </Modal>
     </SafeAreaView>
@@ -313,20 +341,50 @@ export default function WorkoutPlayer() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: space.lg, paddingBottom: space.xxl },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.lg, paddingVertical: space.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-  headerTime: { color: colors.text, fontSize: font.large, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  headerDim: { color: colors.textDim, fontSize: font.body },
-  name: { color: colors.text, fontSize: font.title, fontWeight: '700' },
-  target: { color: colors.accent, fontSize: font.body, fontWeight: '600', marginTop: space.xs },
-  reason: { color: colors.textDim, fontSize: font.small, marginTop: space.xs, marginBottom: space.md },
-  done: { marginTop: space.md, marginBottom: space.sm, gap: 2 },
-  doneText: { color: colors.textDim, fontSize: font.small },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.sm },
-  action: { minHeight: 48, paddingHorizontal: space.lg, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, justifyContent: 'center' },
-  actionText: { color: colors.text, fontSize: font.body },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
-  sheet: { backgroundColor: colors.sheet, padding: space.lg, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, gap: space.sm },
-  sheetTitle: { color: colors.text, fontSize: font.large, fontWeight: '600', marginBottom: space.sm },
-  option: { minHeight: TAP_MIN, justifyContent: 'center', paddingHorizontal: space.md, borderRadius: radius.md, backgroundColor: colors.surfaceRaised },
-  optionName: { color: colors.text, fontSize: font.body, fontWeight: '600' },
+  headerWrap: {
+    paddingHorizontal: space.lg,
+    paddingTop: space.xs,
+    paddingBottom: space.sm,
+    gap: space.sm,
+    backgroundColor: colors.background,
+  },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  leavePill: { backgroundColor: colors.surfaceHigh, paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.pill },
+  leaveText: { color: colors.onSurface, fontSize: font.small, fontWeight: '700' },
+  timerPill: { backgroundColor: colors.surfaceHigh, paddingHorizontal: 14, paddingVertical: 7, borderRadius: radius.pill },
+  headerTime: { color: colors.onSurface, fontSize: font.body, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  headerCap: { color: colors.onSurfaceVariant, fontWeight: '500' },
+  headerCount: { color: colors.onSurfaceVariant, fontSize: font.small, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  name: { color: colors.onSurface, fontSize: font.title + 2, fontWeight: '800', letterSpacing: -0.3 },
+  target: { color: colors.primary, fontSize: font.body, fontWeight: '700', marginTop: space.xs },
+  reason: { color: colors.onSurfaceVariant, fontSize: font.small, marginTop: 4, marginBottom: space.md },
+  doneStack: { marginTop: space.sm, marginBottom: space.md, gap: 6 },
+  donePill: { backgroundColor: colors.surfaceLow, borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 9 },
+  doneText: { color: colors.onSurfaceVariant, fontSize: font.small, fontWeight: '600' },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.xs },
+  action: {
+    flexGrow: 1,
+    minHeight: 46,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionText: { color: colors.onSurface, fontSize: font.small + 1, fontWeight: '700' },
+  finishEarly: { color: colors.onSurfaceVariant, fontSize: font.body, fontWeight: '600' },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6, 10, 14, 0.68)' },
+  sheet: {
+    backgroundColor: colors.sheet,
+    padding: space.lg,
+    paddingBottom: space.xxl,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    gap: space.md,
+  },
+  handle: { alignSelf: 'center', width: 38, height: 4, borderRadius: 99, backgroundColor: colors.outlineVariant },
+  sheetTitle: { color: colors.onSurface, fontSize: font.large, fontWeight: '800' },
+  option: { minHeight: TAP_MIN, justifyContent: 'center', paddingHorizontal: space.lg, backgroundColor: colors.surface },
+  optionName: { color: colors.onSurface, fontSize: font.body, fontWeight: '700' },
+  optionSub: { color: colors.onSurfaceVariant, fontSize: font.small },
 });

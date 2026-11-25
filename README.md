@@ -14,9 +14,9 @@ Expo SDK 57 + React Native + TypeScript. **All data stays on the phone** — the
 - **Train**: the week's plan with a reason on every change. **Tap any day to see its whole plan**: the exercise list with sets, reps, rest, the station to look for and the suggested weight from your last sessions, or, for a run or ride, the structure step by step. Move / skip / sick / travel and the week rebalances without cramming. Full-screen workout player for YMCA strength days (one exercise at a time, frames, cues, prefilled steppers, auto rest timer with vibration, swap, session timer against the 50-min cap, session RPE). Structured runs with VDOT paces, structured rides with heart-rate zones and cadence, and planned-vs-actual after the watch syncs. Manual log for tennis and anything else.
 - **Race goal mode**: add a race (5K through marathon, sprint / Olympic tri, Ironman 70.3) and the plan builds toward it — phases (base → build → peak → taper → race week), a long ride and long run that ramp and then taper, a predicted finish, and an honest readiness check. A triathlon switches the week to two strength days, a quality ride, a quality run and a Saturday long ride with a brick run, keeping Sunday tennis. From the date swimming starts, two of those days become swims (see Swimming).
 - **Run history**: every run with pace and heart-rate trends, and pace compared at a similar heart rate.
-- **Food**: calorie and protein rings, quick add from ~180 Indian vegetarian foods with household servings, favourites, recents, copy yesterday, custom recipes, USDA search, barcode scanning. Alongside breakfast, lunch, snack and dinner there is an **Extras** list for anything eaten outside the planned meals, fruit through the day or a yoghurt, with no limit on how many things go in it. Rule-based weekly meal plan (protein anchor per meal, no repeats within 3 days, swap any meal) and grocery list. Optional "cook once, eat twice" plans the same dinner two evenings running.
+- **Food**: wavy circular calorie and protein progress indicators, quick add from 220+ Indian vegetarian ingredients and regional dishes (South, West, North and East India, calibrated against INDB / IFCT 2017) with household servings, favourites, recents, copy yesterday, custom recipes, free Open Food Facts India text search and barcode scanning, plus optional USDA search. Alongside breakfast, lunch, snack and dinner there is an **Extras** list for anything eaten outside the planned meals, fruit through the day or a yoghurt, with no limit on how many things go in it. Variety-first weekly meal plan (protein anchor per meal, daily protein-base rotation across paneer/soy/lentils/legumes/besan/dairy, no dish twice in 7 days, cross-week memory, tap any suggested meal to view its scaled recipe & step-by-step instructions, swap any meal) and grocery list. Optional "cook once, eat twice" plans the same dinner two evenings running.
 - **Progress**: 7-day-average weight trend, waist, VO2 max over 90 days, progress photos (on-device only), and the Sunday weekly review (weight, strength PRs, pace at similar heart rate, adherence, next week's plan with its changes explained).
-- **Look and navigation**: a dark theme with a dusky gradient glowing behind the top of every screen and translucent cards over it. A floating tab bar (Today, Train, Food, Progress) with a **+** button for quick logging: check-in, food, weight, activity. Settings is behind the gear at the top of each tab.
+- **Look, theme and animations (Material 3 Expressive — Material You Ocean)**: redesigned around Compose Material 3 Expressive (1.5.0) tokens in a dark **Material You Ocean** palette (`#101418` canvas, 5-step tonal surface containers `#171C22` → `#323A43`, Ocean primary `#90CDFF` / `#004B70`, Slate secondary `#394857`, and Lilac tertiary `#D6BEE5` / `#523F60`) with a subtle oceanic ambient top wash. Key components include scalloped `MaterialShapes` avatar, readiness and PR badges, animated wavy linear & circular progress indicators (steps, rest timer, calories/protein), shape-morphing connected button groups (trend ranges, week picker, RPE/RIR), split buttons on session cards, and M3 1.5.0 segmented lists (`3 dp` gaps, `24 dp` outer / `6 dp` inner corners). Navigation uses a **Floating Toolbar** (Today, Train, Food, Progress) with a single spring-gliding active pill, a morphing **+** FAB Menu for quick logging (check-in, food, weight, activity), and **M3 Fade-Through** tab transitions with warm tab pre-mounting. Interactions run natively on the UI thread via `react-native-reanimated` (`MotionScheme.expressive()` spring physics) paired with tactile `expo-haptics`. Settings is behind the gear at the top of each tab.
 - **Notifications**: morning digest (one line: sleep, readiness, load, session, targets) and an evening preview of tomorrow's session and meals. Times in Settings.
 - **Data**: Garmin via Health Connect (read only), or directly from Garmin Connect with a Personal API key, which also brings VO2 max and HRV. A demo-data mode generates realistic data for emulators. JSON backup and restore.
 
@@ -265,7 +265,7 @@ Optional. Create `.env.local` (git-ignored):
 EXPO_PUBLIC_USDA_API_KEY=your_key_here
 ```
 
-Get a free key from https://api.data.gov/signup. Without it, USDA search is disabled; the local food database and barcode scanning (Open Food Facts, no key) still work.
+Get a free key from https://api.data.gov/signup. Without it, USDA search is hidden; the local INDB / IFCT Indian food database and Open Food Facts India text search & barcode scanning (no key required) still work.
 
 ## Day-to-day development
 
@@ -301,13 +301,13 @@ src/domain/        Pure TypeScript logic, no React. Unit tested (*.test.ts next 
                    running/ VDOT and structured runs
                    plan/ week builder, rules, day adjustments, rescheduling
                    nutrition/ targets, meal plan, recipes
-src/data/          exercises.ts (library), workoutTemplates.ts, foods.ts (seed DB), youtube.json, exerciseImages.ts (generated)
+src/data/          exercises.ts (library), workoutTemplates.ts, foods.ts + indianRegionalFoods.ts (seed DB), youtube.json, exerciseImages.ts (generated)
 src/db/            Drizzle schema, generated migrations, repos (the only code that touches the database)
 src/sources/       Where activity data comes from: healthConnect.ts, appleHealth.ts, garminApi.ts, mock.ts (same interface)
 src/sync/          syncService (read → store → dedupe → recompute), background task, notifications, digest text, backup
-src/services/      USDA and Open Food Facts lookups
-src/features/      Screen pieces grouped by feature (workout player parts, forms, plan cards)
-src/ui/            Theme and gradient backdrop, shared components, the card kit (cards.tsx), charts and their tested geometry, icons, formatting
+src/services/      Open Food Facts India (text + barcode) and USDA lookups
+src/features/      Screen pieces grouped by feature (workout player parts, forms, plan cards, Floating Toolbar & FAB Menu)
+src/ui/            Material 3 Expressive Ocean theme (theme.ts), Reanimated 4 motion kit (motion.tsx), expressive primitives (expressive.tsx), shared components, cards, charts, icons, formatting
 assets/exercises/  Two frames per exercise from free-exercise-db (public domain)
 src/domain/cycling/ Bike zones and structured rides
 src/domain/swimming/ Swim progression and structured pool swims
@@ -323,10 +323,10 @@ Rules of thumb:
 - A render error anywhere lands on the `ErrorBoundary` in `app/_layout.tsx` rather than a blank screen, and shows the message to report. Nothing is sent anywhere — there is no crash reporting.
 - To tweak behaviour (caps, thresholds, percentages, rep ranges), edit `src/config/tunables.ts`.
 - To add an exercise: append to `src/data/exercises.ts`, drop two frames in `assets/exercises/<id>/0.jpg` and `1.jpg`, run `node scripts/gen-exercise-images.js`.
-- To change the look: colours and the backdrop gradient are tokens in `src/ui/theme.ts`. Cards are translucent (`surface`) so the gradient shows through; anything that floats over content, such as bottom sheets and the tab bar, uses the opaque `sheet` colour or content bleeds through it. Gradients are drawn with react-native-svg, so there is no gradient or blur library.
+- To change the look: Material 3 Expressive (Material You Ocean) tonal surfaces, semantic container roles (`primaryContainer`, `secondaryContainer`, `tertiaryContainer`), expressive radii and typography live in `src/ui/theme.ts`. Native UI-thread spring curves and haptics live in `src/ui/motion.tsx`, and M3 Expressive primitives (`ScallopBadge`, `WavyLinearProgress`, `WavyCircularProgress`, `ConnectedButtonGroup`, `SplitButton`) live in `src/ui/expressive.tsx`. Ambient washes and wavy tracks are drawn with `react-native-svg` + `react-native-reanimated`.
 - To change the app icon: edit the shapes in `scripts/make-icons.js` and run `node scripts/make-icons.js`. It writes every icon the app needs — square icon, the three adaptive layers, splash, favicon and the Android notification icon — from one description, so they can't drift apart. Two deliberate differences: the adaptive layers are drawn smaller, because some launchers mask the icon to a circle and would clip the ceiling line; and the notification icon is solid white on transparency with a thicker ceiling, because Android throws away a small icon's colours and draws only its silhouette, at a size where a thin line disappears. Leaving that icon unset is what makes a notification show a featureless blob: the launcher icon is opaque corner to corner, so its silhouette is a square.
 - To add a YouTube video for an exercise: edit `src/data/youtube.json`.
-- To add a food or dish: append to `src/data/foods.ts` (new ids are added on the next launch; existing rows aren't overwritten).
+- To add a food or dish: append to `src/data/foods.ts` or `src/data/indianRegionalFoods.ts` (new ids are added on the next launch; existing rows aren't overwritten).
 - The widget lives in `plugins/withStepsWidget.js` (the name still says steps so that widgets already placed on a home screen keep working): the Kotlin, layout and manifest entry are generated into `android/` at prebuild, so edit the plugin, not the generated files.
 
 ## The plan for a day
@@ -421,6 +421,6 @@ Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) for how the pr
 ## Licences and data sources
 
 - Exercise frames: [free-exercise-db](https://github.com/yuhonas/free-exercise-db), public domain.
-- Food composition: Indian Food Composition Tables 2017 (NIN) for ingredients; dishes are recipe estimates and marked as such in the app. Packaged foods from Open Food Facts; USDA FoodData Central as a backup search.
+- Food composition: Indian Food Composition Tables 2017 (ICMR-NIN) and Indian Nutrient Databank (INDB / Anuvaad) for regional Indian vegetarian dishes and ingredients; recipe dishes are marked as estimates in the app. Packaged foods & text/barcode search from Open Food Facts India; USDA FoodData Central as an optional backup search.
 
 MIT licensed. See [LICENSE](LICENSE).

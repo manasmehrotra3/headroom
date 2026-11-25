@@ -159,6 +159,6 @@ export function groupSleepSessions(samples: readonly RawSleepSample[]): SourceSl
 
     const startMs = Math.min(...chosen.map((s) => s.startMs));
     const endMs = Math.max(...chosen.map((s) => s.endMs));
-    return [{ externalId: `hk:sleep:${sourceId}:${startMs}`, startMs, endMs, stages }];
+    return [{ externalId: `hk:sleep:${sourceId}:${startMs}`, startMs, endMs, stages, score: null }];
   });
 }

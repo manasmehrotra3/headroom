@@ -198,6 +198,11 @@ export const sleepSessions = sqliteTable(
     endedAt: integer('ended_at', { mode: 'timestamp_ms' }).notNull(),
     /** Stage segments as Health Connect gives them (stage codes in domain/sleepScore.ts). */
     stages: text('stages', { mode: 'json' }).$type<{ start: number; end: number; stage: number }[]>().notNull(),
+    /**
+     * The source's own sleep score out of 100, when it publishes one. Garmin does, and it is what
+     * Garmin Connect shows, so it wins over Headroom's calculation. Null for every other source.
+     */
+    sourceScore: integer('source_score'),
   },
   (table) => [index('sleep_sessions_date_idx').on(table.date)],
 );

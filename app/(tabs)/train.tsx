@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 
 import { db } from '@/db/client';
 import { ensureWeek, markSessionDay, moveSessionTo } from '@/db/repos/planRepo';
@@ -15,8 +16,10 @@ import { addDays, startOfWeek, todayKey, WEEKDAY_LABELS, weekdayOf, type DateKey
 import type { PlannedSession, SessionDetail } from '@/domain/plan/types';
 import { SessionCard } from '@/features/plan/SessionCard';
 import { TabHeader } from '@/features/navigation/TabHeader';
-import { Body, Button, Card, RowLink, Screen, SectionLabel } from '@/ui/components';
+import { Body, Button, Card, RowGroup, RowLink, Screen, SectionLabel } from '@/ui/components';
+import { ConnectedButtonGroup, segmentedCorners } from '@/ui/expressive';
 import { formatMonthDay } from '@/ui/format';
+import { M3Enter, M3Pressable } from '@/ui/motion';
 import { colors, font, radius, space, TAP_MIN } from '@/ui/theme';
 
 export default function TrainTab() {
@@ -28,7 +31,6 @@ export default function TrainTab() {
   const { data: changeRows } = useLiveQuery(db.select().from(planChanges).where(eq(planChanges.weekStart, weekStart)), [weekStart]);
   const [actionsFor, setActionsFor] = useState<PlannedSession | null>(null);
   const [moving, setMoving] = useState(false);
-  // Watched so the derived reads below re-run when these tables change; the rows are unused.
   const { updatedAt: workoutsAt } = useLiveQuery(db.select({ id: workoutLogs.id }).from(workoutLogs).where(eq(workoutLogs.status, 'in_progress')));
   const { updatedAt: racesAt } = useLiveQuery(db.select({ id: races.id }).from(races));
 
@@ -64,120 +66,188 @@ export default function TrainTab() {
         ? 'Last week'
         : `Week of ${formatMonthDay(weekStart)}`;
 
+  const weekNavValue: 'prev' | 'current' | 'next' =
+    weekStart < thisWeek ? 'prev' : weekStart > thisWeek ? 'next' : 'current';
+
+  const onWeekNav = (id: 'prev' | 'current' | 'next') => {
+    if (id === 'prev') showWeek(addDays(weekStart, -7));
+    else if (id === 'next') showWeek(addDays(weekStart, 7));
+    else showWeek(thisWeek);
+  };
+
+  const swappableDays = actionsFor
+    ? sessions.filter((s) => s.date !== actionsFor.date && s.status === 'planned' && s.date >= today)
+    : [];
+
   return (
     <Screen bottomInset>
       <TabHeader
         title={weekTitle}
-        subtitle={isThisWeek ? 'Every change comes with its reason. Tap Move / skip on any day.' : "Preview. Built from this week's data; it refreshes as the week goes on."}
+        subtitle={isThisWeek ? 'Every change comes with its reason. Tap ▾ on any session to move or skip.' : "Preview built from this week's data."}
       />
-      <View style={{ flexDirection: 'row', gap: space.sm, marginBottom: space.md }}>
-        <View style={{ flex: 1 }}>
-          <Button variant="secondary" label="‹ Week" onPress={() => showWeek(addDays(weekStart, -7))} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Button variant="secondary" label="Week ›" onPress={() => showWeek(addDays(weekStart, 7))} />
-        </View>
-      </View>
+
+      <M3Enter index={0} style={{ marginBottom: space.md }}>
+        <ConnectedButtonGroup
+          options={[
+            { id: 'prev', label: '‹ Prev' },
+            { id: 'current', label: 'This week' },
+            { id: 'next', label: 'Next ›' },
+          ]}
+          value={weekNavValue}
+          onChange={onWeekNav}
+          size="large"
+        />
+      </M3Enter>
 
       {race ? (
-        <Card style={{ borderColor: colors.info }}>
-          <Body>
-            {race.race.name} · {RACE_TYPES[race.race.type].short} · {raceCountdown(race)}
-          </Body>
-          <Body dim>
-            {PHASE_LABELS[race.phase]} phase{race.longRideMin ? `, long ride ${race.longRideMin} min` : ''}
-            {race.longRunMin ? `, long run ${race.longRunMin} min` : ''}.
-          </Body>
-          <Button variant="secondary" label="Race plan" onPress={() => router.push('/insights/race')} />
-        </Card>
+        <M3Enter index={1}>
+          <Card tone="tertiary">
+            <View style={styles.raceTop}>
+              <Text style={styles.raceTitle}>
+                {race.race.name} · {RACE_TYPES[race.race.type].short}
+              </Text>
+              <View style={styles.racePill}>
+                <Text style={styles.racePillText}>{raceCountdown(race)}</Text>
+              </View>
+            </View>
+            <Text style={styles.raceMeta}>
+              {PHASE_LABELS[race.phase]} phase{race.longRideMin ? `, long ride ${race.longRideMin} min` : ''}
+              {race.longRunMin ? `, long run ${race.longRunMin} min` : ''}.
+            </Text>
+            <Button variant="primary" label="Open race plan" onPress={() => router.push('/insights/race')} />
+          </Card>
+        </M3Enter>
       ) : null}
 
       {open ? (
-        <Card style={{ borderColor: colors.accent }}>
-          <Body>A workout is still open.</Body>
-          <Button label="Resume workout" onPress={() => router.push(`/workout/${open.id}`)} />
-        </Card>
+        <M3Enter index={1}>
+          <Card tone="primary">
+            <Text style={styles.resumeTitle}>A workout is still open.</Text>
+            <Button label="Resume workout" onPress={() => router.push(`/workout/${open.id}`)} />
+          </Card>
+        </M3Enter>
       ) : null}
 
-      {sessions.map((s) => (
-        <SessionCard key={s.id} session={s} isToday={s.date === today} onActions={() => setActionsFor(s)} />
+      {sessions.map((s, idx) => (
+        <M3Enter key={s.id} index={Math.min(idx + 1, 6)}>
+          <SessionCard session={s} isToday={s.date === today} onActions={() => setActionsFor(s)} />
+        </M3Enter>
       ))}
 
       {changeRows.length > 0 ? (
-        <>
+        <M3Enter index={6}>
           <SectionLabel>Why the plan looks like this</SectionLabel>
-          {[...changeRows]
-            .reverse()
-            // One line per day and rule: the newest reason replaces the ones it superseded.
-            .filter((c, i, all) => all.findIndex((other) => other.date === c.date && other.ruleId === c.ruleId) === i)
-            .map((c) => (
-              <Body key={c.id} dim>
-                • {c.reason}
-              </Body>
-            ))}
-        </>
+          <Card tone="low">
+            {[...changeRows]
+              .reverse()
+              .filter((c, i, all) => all.findIndex((other) => other.date === c.date && other.ruleId === c.ruleId) === i)
+              .map((c) => (
+                <Body key={c.id} dim>
+                  • {c.reason}
+                </Body>
+              ))}
+          </Card>
+        </M3Enter>
       ) : null}
 
       <SectionLabel>More</SectionLabel>
-      <RowLink label="Exercise library" onPress={() => router.push('/exercises')} />
-      <RowLink label="Log an activity (tennis, walk, yoga…)" onPress={() => router.push('/log/activity')} />
-      <RowLink label="Running paces" onPress={() => router.push('/edit/paces')} />
-      <RowLink label="Run history" onPress={() => router.push('/insights/runs')} />
-      <RowLink label="Races" onPress={() => router.push('/edit/races')} />
+      <RowGroup>
+        <RowLink label="Exercise library" onPress={() => router.push('/exercises')} />
+        <RowLink label="Log an activity (tennis, walk, yoga…)" onPress={() => router.push('/log/activity')} />
+        <RowLink label="Running paces" onPress={() => router.push('/edit/paces')} />
+        <RowLink label="Run history" onPress={() => router.push('/insights/runs')} />
+        <RowLink label="Races" onPress={() => router.push('/edit/races')} />
+      </RowGroup>
 
-      <Modal visible={actionsFor !== null} transparent animationType="slide" onRequestClose={() => setActionsFor(null)}>
-        <Pressable style={styles.backdrop} onPress={() => setActionsFor(null)} />
-        <View style={styles.sheet}>
-          {actionsFor ? (
-            <>
-              <Text style={styles.sheetTitle}>
-                {WEEKDAY_LABELS[weekdayOf(actionsFor.date)]}: {actionsFor.detail.kind === 'run' ? actionsFor.detail.title : actionsFor.sessionType.replace('_', ' ')}
-              </Text>
-              {moving ? (
-                <>
-                  <Body dim>Swap with which day?</Body>
-                  {sessions
-                    .filter((s) => s.date !== actionsFor.date && s.status === 'planned' && s.date >= today)
-                    .map((s) => (
-                      <Pressable key={s.date} onPress={() => move(s.date)} style={styles.option}>
-                        <Text style={styles.optionText}>
-                          {WEEKDAY_LABELS[weekdayOf(s.date)]} · {s.detail.kind === 'run' ? s.detail.title : s.sessionType.replace('_', ' ')}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  <Button variant="secondary" label="Back" onPress={() => setMoving(false)} />
-                </>
-              ) : (
-                <>
-                  <Pressable onPress={() => setMoving(true)} style={styles.option}>
-                    <Text style={styles.optionText}>Move to another day</Text>
-                  </Pressable>
-                  <Pressable onPress={() => act('skipped')} style={styles.option}>
-                    <Text style={styles.optionText}>Skip it (nothing moves)</Text>
-                  </Pressable>
-                  <Pressable onPress={() => act('sick')} style={styles.option}>
-                    <Text style={styles.optionText}>Sick day (re-place if a free day fits; next day easy)</Text>
-                  </Pressable>
-                  <Pressable onPress={() => act('travel')} style={styles.option}>
-                    <Text style={styles.optionText}>Travel day (re-place if a free day fits)</Text>
-                  </Pressable>
-                  <Button variant="secondary" label="Cancel" onPress={() => setActionsFor(null)} />
-                </>
-              )}
-            </>
-          ) : null}
+      <Modal visible={actionsFor !== null} transparent animationType="none" onRequestClose={() => { setActionsFor(null); setMoving(false); }}>
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <Animated.View entering={FadeIn.duration(180)} style={styles.backdrop}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => { setActionsFor(null); setMoving(false); }} />
+          </Animated.View>
+          <Animated.View entering={SlideInDown.springify().damping(20).stiffness(240)} style={styles.sheet}>
+            <View style={styles.handle} />
+            {actionsFor ? (
+              <>
+                <Text style={styles.sheetTitle}>
+                  {WEEKDAY_LABELS[weekdayOf(actionsFor.date)]}: {actionsFor.detail.kind === 'run' ? actionsFor.detail.title : actionsFor.sessionType.replace('_', ' ')}
+                </Text>
+                {moving ? (
+                  <>
+                    <Body dim>Swap with which day?</Body>
+                    <View style={styles.segStack}>
+                      {swappableDays.map((s, i) => (
+                        <M3Pressable
+                          key={s.date}
+                          onPress={() => move(s.date)}
+                          haptic="select"
+                          style={[styles.option, segmentedCorners(i === 0, i === swappableDays.length - 1)]}
+                        >
+                          <Text style={styles.optionText}>
+                            {WEEKDAY_LABELS[weekdayOf(s.date)]} · {s.detail.kind === 'run' ? s.detail.title : s.sessionType.replace('_', ' ')}
+                          </Text>
+                        </M3Pressable>
+                      ))}
+                    </View>
+                    <Button variant="secondary" label="Back" onPress={() => setMoving(false)} />
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.segStack}>
+                      {[
+                        { label: 'Move to another day', onPress: () => setMoving(true) },
+                        { label: 'Skip it (nothing moves)', onPress: () => act('skipped') },
+                        { label: 'Sick day (re-place + next day easy)', onPress: () => act('sick') },
+                        { label: 'Travel day (re-place if a free day fits)', onPress: () => act('travel') },
+                      ].map((item, i, all) => (
+                        <M3Pressable
+                          key={item.label}
+                          onPress={item.onPress}
+                          haptic="tap"
+                          style={[styles.option, segmentedCorners(i === 0, i === all.length - 1)]}
+                        >
+                          <Text style={styles.optionText}>{item.label}</Text>
+                        </M3Pressable>
+                      ))}
+                    </View>
+                    <Button variant="secondary" label="Cancel" onPress={() => setActionsFor(null)} />
+                  </>
+                )}
+              </>
+            ) : null}
+          </Animated.View>
         </View>
       </Modal>
-      <View style={{ height: space.md }} />
-      <Text style={{ color: colors.textDim, fontSize: font.small }}>Changes this week: {changeRows.length}</Text>
+
+      <View style={{ height: space.sm }} />
+      <Text style={{ color: colors.onSurfaceVariant, fontSize: font.small }}>Changes this week: {changeRows.length}</Text>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
-  sheet: { backgroundColor: colors.sheet, padding: space.lg, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, gap: space.sm },
-  sheetTitle: { color: colors.text, fontSize: font.large, fontWeight: '600', marginBottom: space.sm, textTransform: 'capitalize' },
-  option: { minHeight: TAP_MIN, justifyContent: 'center', paddingHorizontal: space.md, borderRadius: radius.md, backgroundColor: colors.surfaceRaised },
-  optionText: { color: colors.text, fontSize: font.body },
+  raceTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
+  raceTitle: { color: colors.onTertiaryContainer, fontSize: font.body + 1, fontWeight: '800', flexShrink: 1 },
+  racePill: { backgroundColor: 'rgba(0,0,0,0.22)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill },
+  racePillText: { color: colors.onTertiaryContainer, fontSize: font.caption + 1, fontWeight: '700' },
+  raceMeta: { color: colors.onTertiaryContainer, opacity: 0.86, fontSize: font.small, lineHeight: 19 },
+  resumeTitle: { color: colors.onPrimaryContainer, fontSize: font.body + 1, fontWeight: '700' },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6, 10, 14, 0.68)' },
+  sheet: {
+    backgroundColor: colors.sheet,
+    padding: space.lg,
+    paddingBottom: space.xxl,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    gap: space.md,
+  },
+  handle: { alignSelf: 'center', width: 38, height: 4, borderRadius: 99, backgroundColor: colors.outlineVariant },
+  sheetTitle: { color: colors.onSurface, fontSize: font.large, fontWeight: '800', textTransform: 'capitalize' },
+  segStack: { gap: 3 },
+  option: {
+    minHeight: TAP_MIN,
+    justifyContent: 'center',
+    paddingHorizontal: space.lg,
+    backgroundColor: colors.surface,
+  },
+  optionText: { color: colors.onSurface, fontSize: font.body, fontWeight: '600' },
 });

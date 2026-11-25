@@ -2,7 +2,7 @@ import { and, asc, desc, eq, gte, lte } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { TUNABLES } from '@/config/tunables';
 import { db } from '@/db/client';
@@ -30,10 +30,11 @@ import { keyExpiryNotice } from '@/sources/garminApiMapping';
 import { PHONE_HEALTH } from '@/sources/phoneHealth';
 import { ensureNotificationPermission } from '@/sync/notifications';
 import { GARMIN_KEY_EXPIRES_KEY, LAST_ERROR_KEY } from '@/sync/syncService';
-import { ListGroup, ListRow, PagedStatCards, SectionHeader, StatPair, type StatCardProps, type Tone } from '@/ui/cards';
+import { PagedStatCards, SectionHeader, StatPair, type StatCardProps, type Tone } from '@/ui/cards';
 import { Body, Button, Card, Screen } from '@/ui/components';
 import { HeartIcon } from '@/ui/icons';
-import { colors, font } from '@/ui/theme';
+import { M3Enter, M3Pressable } from '@/ui/motion';
+import { colors, font, radius, space } from '@/ui/theme';
 
 const ACWR_TONES: Record<AcwrLabel, Tone> = { low: 'neutral', sweet_spot: 'accent', caution: 'warning', high: 'danger', insufficient: 'neutral' };
 const READY_TONES: Record<ReadinessBand, Tone> = { good: 'accent', moderate: 'warning', low: 'danger', unknown: 'neutral' };
@@ -44,7 +45,7 @@ function hoursMinutes(min: number): string {
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
-/** The morning dashboard: greeting, the day's key numbers, today's session, trends and the week ahead. */
+/** Morning dashboard in Material 3 Expressive (Material You Ocean) with staggered native motion. */
 export default function TodayTab() {
   const today = todayKey();
   const weekStart = startOfWeek(today);
@@ -58,7 +59,6 @@ export default function TodayTab() {
       .where(and(gte(plannedSessions.date, weekStart), lte(plannedSessions.date, addDays(weekStart, 6)))),
   );
   const { data: logRows } = useLiveQuery(db.select().from(foodLogs).where(eq(foodLogs.date, today)));
-  // Watched only so the derived reads below re-run when these tables change; the rows are unused.
   const { updatedAt: targetsAt } = useLiveQuery(db.select({ id: nutritionTargets.id }).from(nutritionTargets).orderBy(desc(nutritionTargets.id)).limit(1));
   const { updatedAt: racesAt } = useLiveQuery(db.select({ id: races.id }).from(races));
   const { data: weightRows } = useLiveQuery(db.select().from(bodyMeasurements).orderBy(asc(bodyMeasurements.measuredAt)));
@@ -108,7 +108,6 @@ export default function TodayTab() {
   const eaten = useDbValue(() => totalsOn(today), [today, logRows]);
   const noSource = settingsRow && !settingsRow.healthConnectConnected && settingsRow.dataSource === 'health_connect';
 
-  // Garmin (direct) syncs over the internet with a key that runs out, so say when that stops working.
   const syncValue = (key: string) => syncRows.find((r) => r.key === key)?.value || null;
   const garminProblem =
     settingsRow?.dataSource === 'garmin_api'
@@ -120,13 +119,14 @@ export default function TodayTab() {
       {
         label: 'Readiness',
         value: metrics?.readiness != null ? String(metrics.readiness) : '—',
+        scallop: metrics?.readiness != null,
         chip: { label: READINESS_LABELS[readinessBand], tone: READY_TONES[readinessBand] },
         onPress: () => router.push('/insights/readiness'),
       },
       {
         label: 'Sleep',
         value: metrics?.sleepScore != null ? String(metrics.sleepScore) : '—',
-        chip: { label: asleepMin !== null ? `${hoursMinutes(asleepMin)} asleep` : 'No sleep data' },
+        chip: { label: asleepMin !== null ? `${hoursMinutes(asleepMin)} asleep` : 'No sleep data', tone: asleepMin !== null ? 'tertiary' : 'neutral' },
         onPress: () => router.push('/insights/sleep'),
       },
     ],
@@ -142,7 +142,7 @@ export default function TodayTab() {
         value: vo2.latest ? vo2.latest.vo2Max.toFixed(1) : '—',
         chip: {
           label: vo2.change === null ? (vo2.latest ? 'One reading' : 'No reading') : `${trendArrow(vo2.trend)} ${vo2.change > 0 ? '+' : ''}${vo2.change.toFixed(1)}`,
-          tone: vo2.trend === 'rising' ? 'accent' : vo2.trend === 'falling' ? 'warning' : 'neutral',
+          tone: vo2.trend === 'rising' ? 'tertiary' : vo2.trend === 'falling' ? 'warning' : 'neutral',
         },
         onPress: () => router.push('/insights/vo2'),
       },
@@ -154,108 +154,182 @@ export default function TodayTab() {
       <TabHeader greeting />
 
       {noSource ? (
-        <Card style={{ borderColor: colors.info }}>
-          <Body>Connect Garmin data to get sleep, readiness and training load.</Body>
-          <Button variant="secondary" label={`Set up ${PHONE_HEALTH.name} (or demo data)`} onPress={() => router.push('/edit/health')} />
-        </Card>
+        <M3Enter index={0}>
+          <Card tone="tertiary">
+            <Text style={styles.tertiaryTitle}>Connect Garmin data to get sleep, readiness and training load.</Text>
+            <Button variant="primary" label={`Set up ${PHONE_HEALTH.name} (or demo data)`} onPress={() => router.push('/edit/health')} />
+          </Card>
+        </M3Enter>
       ) : null}
       {garminProblem ? (
-        <Card style={{ borderColor: colors.warning }}>
-          <Body>{garminProblem}</Body>
-          <Button variant="secondary" label="Open Garmin settings" onPress={() => router.push('/edit/health')} />
-        </Card>
+        <M3Enter index={0}>
+          <Card style={{ backgroundColor: colors.warningContainer }}>
+            <Text style={{ color: colors.onWarningContainer, fontSize: font.body, fontWeight: '600' }}>{garminProblem}</Text>
+            <Button variant="secondary" label="Open Garmin settings" onPress={() => router.push('/edit/health')} />
+          </Card>
+        </M3Enter>
       ) : null}
       {notifGranted === false ? (
-        <Card style={{ borderColor: colors.warning }}>
-          <Body dim>Notifications are off, so the morning digest can't be delivered. Allow them in Android settings for this app.</Body>
-        </Card>
+        <M3Enter index={0}>
+          <Card style={{ backgroundColor: colors.warningContainer }}>
+            <Text style={{ color: colors.onWarningContainer, fontSize: font.small }}>
+              Notifications are off, so the morning digest can't be delivered. Allow them in system settings for this app.
+            </Text>
+          </Card>
+        </M3Enter>
       ) : null}
 
-      <PagedStatCards pages={pages} />
+      <M3Enter index={0}>
+        <PagedStatCards pages={pages} />
+      </M3Enter>
 
-      <StepsCard steps={stepsToday} goal={stepGoal} activeKcal={metrics?.activeKcal ?? null} onPress={() => router.push('/edit/routine')} />
+      <M3Enter index={1}>
+        <StepsCard steps={stepsToday} goal={stepGoal} activeKcal={metrics?.activeKcal ?? null} onPress={() => router.push('/edit/routine')} />
+      </M3Enter>
 
       {!checkin ? (
-        <ListGroup>
-          <ListRow
-            icon={<HeartIcon color={colors.accent} size={22} />}
-            tileColor={colors.accentSoft}
-            title="Morning check-in"
-            subtitle="Energy, soreness, any pain"
-            value="Check in ›"
-            caption="Three taps"
-            captionTone="accent"
+        <M3Enter index={2}>
+          <M3Pressable
+            accessibilityRole="button"
             onPress={() => router.push('/log/checkin')}
-            last
-          />
-        </ListGroup>
+            haptic="tap"
+            scaleTo={0.975}
+            style={styles.checkinBanner}
+          >
+            <View style={styles.checkinIcon}>
+              <HeartIcon color={colors.onPrimary} size={20} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.checkinTitle}>Morning check-in</Text>
+              <Text style={styles.checkinSub}>Energy, soreness, any pain · 3 taps</Text>
+            </View>
+            <View style={styles.checkinPill}>
+              <Text style={styles.checkinPillText}>Log ›</Text>
+            </View>
+          </M3Pressable>
+        </M3Enter>
       ) : null}
 
       {race ? (
-        <Pressable onPress={() => router.push('/insights/race')}>
-          <Card>
-            <Text style={{ color: colors.text, fontSize: font.body, fontWeight: '600' }}>
+        <M3Enter index={2}>
+          <M3Pressable onPress={() => router.push('/insights/race')} haptic="tap" scaleTo={0.975} style={styles.raceBanner}>
+            <Text style={styles.raceTitle}>
               {race.race.name} · {RACE_TYPES[race.race.type].short}
             </Text>
-            <Body dim>{raceCountdown(race)}. Tap for the race plan.</Body>
+            <Text style={styles.raceSub}>{raceCountdown(race)}. Tap for the race plan ›</Text>
+          </M3Pressable>
+        </M3Enter>
+      ) : null}
+
+      <M3Enter index={3}>
+        <SectionHeader title="Today's session" />
+        {session ? (
+          <SessionCard session={session} isToday onActions={() => router.push('/train')} />
+        ) : (
+          <Card>
+            <Body dim>Rest day.</Body>
           </Card>
-        </Pressable>
-      ) : null}
+        )}
+        {session && session.addOn && session.status === 'done' && !activityRows.some((a) => a.type === 'strength') ? (
+          <Button
+            variant="secondary"
+            label="Start the 10-min core add-on"
+            onPress={() => {
+              const { workoutId } = beginWorkout('strength_light', 'normal', null);
+              router.push(`/workout/${workoutId}`);
+            }}
+          />
+        ) : null}
+      </M3Enter>
 
-      <SectionHeader title="Today's session" />
-      {session ? (
-        <SessionCard session={session} isToday onActions={() => router.push('/train')} />
-      ) : (
-        <Card>
-          <Body dim>Rest day.</Body>
-        </Card>
-      )}
-      {session && session.addOn && session.status === 'done' && !activityRows.some((a) => a.type === 'strength') ? (
-        <Button
-          variant="secondary"
-          label="Start the 10-min core add-on"
-          onPress={() => {
-            const { workoutId } = beginWorkout('strength_light', 'normal', null);
-            router.push(`/workout/${workoutId}`);
-          }}
-        />
-      ) : null}
+      <M3Enter index={4}>
+        <DoneToday activities={activityRows} />
+        <RpePrompt />
+      </M3Enter>
 
-      <DoneToday activities={activityRows} />
+      <M3Enter index={5}>
+        <SectionHeader title="Food" action={{ label: 'Log', onPress: () => router.navigate('/food') }} />
+        {targets ? (
+          <StatPair
+            left={{
+              label: 'Calories',
+              value: Math.round(eaten.kcal).toLocaleString(),
+              unit: `/ ${Math.round(targets.kcal).toLocaleString()}`,
+              progress: targets.kcal > 0 ? eaten.kcal / targets.kcal : 0,
+              progressColor: eaten.kcal > targets.kcal ? colors.warning : colors.primary,
+              chip:
+                eaten.kcal > targets.kcal
+                  ? { label: `${Math.round(eaten.kcal - targets.kcal)} over`, tone: 'warning' }
+                  : { label: `${Math.round(targets.kcal - eaten.kcal).toLocaleString()} left` },
+              onPress: () => router.navigate('/food'),
+            }}
+            right={{
+              label: 'Protein',
+              value: String(Math.round(eaten.proteinG)),
+              unit: `/ ${Math.round(targets.proteinG)} g`,
+              progress: targets.proteinG > 0 ? eaten.proteinG / targets.proteinG : 0,
+              progressColor: eaten.proteinG >= targets.proteinG ? colors.success : colors.tertiary,
+              chip:
+                eaten.proteinG >= targets.proteinG
+                  ? { label: 'Target hit', tone: 'accent' }
+                  : { label: `${Math.round(targets.proteinG - eaten.proteinG)} g to go`, tone: 'tertiary' },
+              onPress: () => router.navigate('/food'),
+            }}
+          />
+        ) : (
+          <Card>
+            <Body dim>Targets appear once your profile is saved.</Body>
+          </Card>
+        )}
+      </M3Enter>
 
-      <RpePrompt />
+      <M3Enter index={6}>
+        <TrendsCard today={today} weighIns={weighIns} steps={stepHistory} stepGoal={stepGoal} />
+      </M3Enter>
 
-      <SectionHeader title="Food" action={{ label: 'Log', onPress: () => router.navigate('/food') }} />
-      {targets ? (
-        <StatPair
-          left={{
-            label: 'Calories',
-            value: Math.round(eaten.kcal).toLocaleString(),
-            unit: `/ ${Math.round(targets.kcal).toLocaleString()}`,
-            chip:
-              eaten.kcal > targets.kcal
-                ? { label: `${Math.round(eaten.kcal - targets.kcal)} over`, tone: 'warning' }
-                : { label: `${Math.round(targets.kcal - eaten.kcal).toLocaleString()} left` },
-            onPress: () => router.navigate('/food'),
-          }}
-          right={{
-            label: 'Protein',
-            value: String(Math.round(eaten.proteinG)),
-            unit: `/ ${Math.round(targets.proteinG)} g`,
-            chip:
-              eaten.proteinG >= targets.proteinG ? { label: 'Target hit', tone: 'accent' } : { label: `${Math.round(targets.proteinG - eaten.proteinG)} g to go`, tone: 'warning' },
-            onPress: () => router.navigate('/food'),
-          }}
-        />
-      ) : (
-        <Card>
-          <Body dim>Targets appear once your profile is saved.</Body>
-        </Card>
-      )}
-
-      <TrendsCard today={today} weighIns={weighIns} steps={stepHistory} stepGoal={stepGoal} />
-
-      <WeekList sessions={weekSessions} today={today} />
+      <M3Enter index={7}>
+        <WeekList sessions={weekSessions} today={today} />
+      </M3Enter>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  tertiaryTitle: { color: colors.onTertiaryContainer, fontSize: font.body, fontWeight: '600', lineHeight: 22 },
+  checkinBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    backgroundColor: colors.primaryContainer,
+    borderRadius: radius.xl,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md + 2,
+    marginBottom: space.md,
+  },
+  checkinIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkinTitle: { color: colors.onPrimaryContainer, fontSize: font.body + 1, fontWeight: '800' },
+  checkinSub: { color: colors.onPrimaryContainer, opacity: 0.82, fontSize: font.small - 1, marginTop: 1 },
+  checkinPill: {
+    backgroundColor: 'rgba(0, 0, 0, 0.22)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+  },
+  checkinPillText: { color: colors.onPrimaryContainer, fontSize: font.small, fontWeight: '700' },
+  raceBanner: {
+    backgroundColor: colors.tertiaryContainer,
+    borderRadius: radius.xl,
+    padding: space.lg,
+    marginBottom: space.md,
+    gap: 4,
+  },
+  raceTitle: { color: colors.onTertiaryContainer, fontSize: font.body + 1, fontWeight: '800' },
+  raceSub: { color: colors.onTertiaryContainer, opacity: 0.84, fontSize: font.small },
+});

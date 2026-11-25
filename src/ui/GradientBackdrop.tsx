@@ -1,9 +1,6 @@
 /**
- * The dusky gradient behind every screen: slate blue at the top, easing through plum into the
- * near-black background, with a warm glow off the top-right corner.
- *
- * Drawn with react-native-svg, which the app already uses for charts and icons, so there is no
- * extra gradient library. It sits behind the content and never takes touches.
+ * Subtle Material You Ocean ambient tonal wash at the top of each screen.
+ * Keeps the M3 surface hierarchy crisp while giving the top app bar gentle oceanic depth.
  */
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Svg, { Defs, LinearGradient, RadialGradient, Rect, Stop } from 'react-native-svg';
@@ -18,18 +15,18 @@ export function GradientBackdrop() {
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <Svg width={width} height={washHeight}>
         <Defs>
-          <LinearGradient id="backdropWash" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={gradient.top} />
-            <Stop offset="0.42" stopColor={gradient.middle} />
-            <Stop offset="1" stopColor={gradient.bottom} />
+          <LinearGradient id="oceanWash" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={gradient.top} stopOpacity="0.85" />
+            <Stop offset="0.52" stopColor={gradient.middle} stopOpacity="0.45" />
+            <Stop offset="1" stopColor={gradient.bottom} stopOpacity="0" />
           </LinearGradient>
-          <RadialGradient id="backdropGlow" cx="0.9" cy="0.08" rx="0.75" ry="0.42" fx="0.9" fy="0.08">
-            <Stop offset="0" stopColor={gradient.glow} stopOpacity="0.6" />
+          <RadialGradient id="oceanGlow" cx="0.86" cy="0.06" rx="0.72" ry="0.45" fx="0.86" fy="0.06">
+            <Stop offset="0" stopColor={gradient.glow} stopOpacity="0.42" />
             <Stop offset="1" stopColor={gradient.glow} stopOpacity="0" />
           </RadialGradient>
         </Defs>
-        <Rect x="0" y="0" width={width} height={washHeight} fill="url(#backdropWash)" />
-        <Rect x="0" y="0" width={width} height={washHeight} fill="url(#backdropGlow)" />
+        <Rect x="0" y="0" width={width} height={washHeight} fill="url(#oceanWash)" />
+        <Rect x="0" y="0" width={width} height={washHeight} fill="url(#oceanGlow)" />
       </Svg>
     </View>
   );

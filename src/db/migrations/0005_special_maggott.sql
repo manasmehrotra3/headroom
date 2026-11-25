@@ -1,0 +1,1 @@
+ALTER TABLE `sleep_sessions` ADD `source_score` integer;

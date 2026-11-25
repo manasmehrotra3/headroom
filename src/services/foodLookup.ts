@@ -1,7 +1,7 @@
 /**
- * Online food lookups, used only when the local database has no match.
- *   USDA FoodData Central: free key from https://api.data.gov/signup, set EXPO_PUBLIC_USDA_API_KEY in .env.local
- *   Open Food Facts: no key; used for barcodes on packaged foods.
+ * Online food lookups, used when the local IFCT/INDB database has no match:
+ *   - Open Food Facts India (`in.openfoodfacts.org`): free, no API key — text search & barcode scan
+ *   - USDA FoodData Central: free key from https://api.data.gov/signup, set EXPO_PUBLIC_USDA_API_KEY in .env.local
  * Results are copied into the local foods table so they work offline afterwards.
  */
 import type { Macros } from '@/domain/nutrition/types';
@@ -16,6 +16,7 @@ export interface LookupResult {
 }
 
 const USDA_KEY = process.env.EXPO_PUBLIC_USDA_API_KEY ?? '';
+const OFF_HEADERS = { 'User-Agent': 'HeadroomFitnessApp/0.18 (personal use)' };
 
 export function hasUsdaKey(): boolean {
   return USDA_KEY.length > 0;
@@ -62,29 +63,61 @@ export async function searchUsda(query: string): Promise<LookupResult[]> {
 }
 
 interface OffProduct {
+  code?: string;
   product_name?: string;
   brands?: string;
   serving_size?: string;
   nutriments?: Record<string, number | string | undefined>;
 }
 
+function parseOffProduct(product: OffProduct, fallbackCode?: string): LookupResult | null {
+  const name = product.product_name?.trim();
+  const code = product.code?.trim() || fallbackCode;
+  if (!name || !code) return null;
+  const n = product.nutriments ?? {};
+  const num = (key: string) => Number(n[key] ?? 0) || 0;
+  const kcal = num('energy-kcal_100g') || Math.round(num('energy_100g') / 4.184);
+  const proteinG = num('proteins_100g');
+  const carbsG = num('carbohydrates_100g');
+  const fatG = num('fat_100g');
+  const fiberG = num('fiber_100g');
+  if (kcal <= 0 && proteinG <= 0 && carbsG <= 0 && fatG <= 0) return null;
+  const servings = [{ label: '100 g', grams: 100 }];
+  const servingGrams = Number.parseFloat(String(product.serving_size ?? ''));
+  if (servingGrams > 0 && servingGrams <= 1000) servings.unshift({ label: `1 serving (${product.serving_size})`, grams: servingGrams });
+  const brand = product.brands?.split(',')[0]?.trim();
+  return {
+    id: `off:${code}`,
+    name: brand && !name.toLowerCase().includes(brand.toLowerCase()) ? `${name} (${brand})` : name,
+    source: 'off',
+    sourceRef: `Open Food Facts India ${code}`,
+    per100: { kcal, proteinG, carbsG, fatG, fiberG },
+    servings,
+  };
+}
+
+/** Free text search against Open Food Facts India (no API key needed). */
+export async function searchOpenFoodFactsIndia(query: string): Promise<LookupResult[]> {
+  const url = `https://in.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=20&fields=code,product_name,brands,serving_size,nutriments`;
+  const response = await fetch(url, { headers: OFF_HEADERS });
+  if (!response.ok) throw new Error(`Open Food Facts search failed (${response.status})`);
+  const json = (await response.json()) as { products?: OffProduct[] };
+  const results: LookupResult[] = [];
+  const seen = new Set<string>();
+  for (const p of json.products ?? []) {
+    const parsed = parseOffProduct(p);
+    if (!parsed || seen.has(parsed.id)) continue;
+    seen.add(parsed.id);
+    results.push(parsed);
+  }
+  return results;
+}
+
 export async function lookupBarcode(barcode: string): Promise<LookupResult | null> {
-  const url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json?fields=product_name,brands,serving_size,nutriments`;
-  const response = await fetch(url, { headers: { 'User-Agent': 'PersonalFitnessApp/0.1 (personal use)' } });
+  const url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json?fields=code,product_name,brands,serving_size,nutriments`;
+  const response = await fetch(url, { headers: OFF_HEADERS });
   if (!response.ok) return null;
   const json = (await response.json()) as { status?: number; product?: OffProduct };
   if (!json.product || json.status === 0) return null;
-  const n = json.product.nutriments ?? {};
-  const num = (key: string) => Number(n[key] ?? 0) || 0;
-  const servings = [{ label: '100 g', grams: 100 }];
-  const servingGrams = Number.parseFloat(String(json.product.serving_size ?? ''));
-  if (servingGrams > 0) servings.unshift({ label: `1 serving (${json.product.serving_size})`, grams: servingGrams });
-  return {
-    id: `off:${barcode}`,
-    name: `${json.product.product_name ?? 'Unknown product'}${json.product.brands ? ` (${json.product.brands})` : ''}`,
-    source: 'off',
-    sourceRef: `Open Food Facts ${barcode}`,
-    per100: { kcal: num('energy-kcal_100g'), proteinG: num('proteins_100g'), carbsG: num('carbohydrates_100g'), fatG: num('fat_100g'), fiberG: num('fiber_100g') },
-    servings,
-  };
+  return parseOffProduct(json.product, barcode);
 }

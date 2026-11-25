@@ -50,7 +50,7 @@ function mockSleep(date: DateKey, r: () => number): SourceSleep {
     i += 1;
   }
   void total;
-  return { externalId: `mock:sleep:${date}`, startMs: bed, endMs: wake, stages };
+  return { externalId: `mock:sleep:${date}`, startMs: bed, endMs: wake, stages, score: null };
 }
 
 function mockActivity(date: DateKey, r: () => number): SourceActivity | null {

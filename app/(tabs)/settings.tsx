@@ -10,11 +10,24 @@ import { TabHeader } from '@/features/navigation/TabHeader';
 import { PHONE_HEALTH } from '@/sources/phoneHealth';
 import { Body, Card, RowGroup, RowLink, Screen, SectionLabel } from '@/ui/components';
 import { DISCLAIMER } from '@/ui/disclaimer';
+import {
+  CalendarIcon,
+  FoodIcon,
+  GearIcon,
+  HeartIcon,
+  ProgressIcon,
+  RunIcon,
+  ScaleIcon,
+  SettingsIcon,
+  TodayIcon,
+  TrainIcon,
+} from '@/ui/icons';
+import { M3Enter } from '@/ui/motion';
+import { colors } from '@/ui/theme';
 
 export default function SettingsTab() {
   const { data: settingsRows } = useLiveQuery(db.select().from(settings));
   const { data: availableEquipment } = useLiveQuery(db.select().from(equipment).where(eq(equipment.available, true)));
-  // The latest VO2 max, so the row shows whether anything has been entered.
   const { data: vo2Rows } = useLiveQuery(
     db.select({ vo2Max: dailyMetrics.vo2Max }).from(dailyMetrics).where(isNotNull(dailyMetrics.vo2Max)).orderBy(desc(dailyMetrics.date)).limit(1),
   );
@@ -24,46 +37,55 @@ export default function SettingsTab() {
 
   return (
     <Screen bottomInset>
-      <TabHeader title="Settings" showSettings={false} />
+      <TabHeader title="Settings" subtitle="Material You Ocean · All data stays on this phone." showSettings={false} />
 
-      <SectionLabel>You</SectionLabel>
-      <RowGroup>
-        <RowLink label="Body & goals" onPress={() => router.push('/edit/body')} />
-        <RowLink label="Running & watch" onPress={() => router.push('/edit/running')} />
-        <RowLink label="Diet" onPress={() => router.push('/edit/diet')} />
-        <RowLink label="Injuries & niggles" onPress={() => router.push('/edit/injuries')} />
-      </RowGroup>
+      <M3Enter index={0}>
+        <SectionLabel>You</SectionLabel>
+        <RowGroup>
+          <RowLink icon={<ScaleIcon color={colors.primary} size={18} />} label="Body & goals" onPress={() => router.push('/edit/body')} />
+          <RowLink icon={<RunIcon color={colors.primary} size={18} />} label="Running & watch" onPress={() => router.push('/edit/running')} />
+          <RowLink icon={<FoodIcon color={colors.primary} size={18} />} label="Diet" onPress={() => router.push('/edit/diet')} />
+          <RowLink icon={<HeartIcon color={colors.primary} size={18} />} label="Injuries & niggles" onPress={() => router.push('/edit/injuries')} />
+        </RowGroup>
+      </M3Enter>
 
-      <SectionLabel>Training</SectionLabel>
-      <RowGroup>
-        <RowLink label="YMCA equipment" value={`${availableEquipment.length} items`} onPress={() => router.push('/edit/equipment')} />
-        <RowLink label="Weekly schedule" onPress={() => router.push('/edit/schedule')} />
-        <RowLink label="Effort scale" value={current?.effortScale === 'rir' ? 'RIR' : 'RPE'} onPress={() => router.push('/edit/effort')} />
-        <RowLink label="Running paces (VDOT)" onPress={() => router.push('/edit/paces')} />
-        <RowLink label="VO2 max" value={latestVo2 ? latestVo2.toFixed(1) : 'none yet'} onPress={() => router.push('/edit/vo2')} />
-        <RowLink label="Races & race plan" onPress={() => router.push('/edit/races')} />
-        <RowLink label="Run history" onPress={() => router.push('/insights/runs')} />
-        <RowLink label="Exercise library" onPress={() => router.push('/exercises')} />
-      </RowGroup>
+      <M3Enter index={1}>
+        <SectionLabel>Training</SectionLabel>
+        <RowGroup>
+          <RowLink icon={<TrainIcon color={colors.primary} size={18} />} label="YMCA equipment" value={`${availableEquipment.length} items`} onPress={() => router.push('/edit/equipment')} />
+          <RowLink icon={<CalendarIcon color={colors.primary} size={18} />} label="Weekly schedule" onPress={() => router.push('/edit/schedule')} />
+          <RowLink icon={<SettingsIcon color={colors.primary} size={18} />} label="Effort scale" value={current?.effortScale === 'rir' ? 'RIR' : 'RPE'} onPress={() => router.push('/edit/effort')} />
+          <RowLink icon={<RunIcon color={colors.primary} size={18} />} label="Running paces (VDOT)" onPress={() => router.push('/edit/paces')} />
+          <RowLink icon={<ProgressIcon color={colors.primary} size={18} />} label="VO2 max" value={latestVo2 ? latestVo2.toFixed(1) : 'none yet'} onPress={() => router.push('/edit/vo2')} />
+          <RowLink icon={<TodayIcon color={colors.primary} size={18} />} label="Races & race plan" onPress={() => router.push('/edit/races')} />
+          <RowLink icon={<RunIcon color={colors.primary} size={18} />} label="Run history" onPress={() => router.push('/insights/runs')} />
+          <RowLink icon={<TrainIcon color={colors.primary} size={18} />} label="Exercise library" onPress={() => router.push('/exercises')} />
+        </RowGroup>
+      </M3Enter>
 
-      <SectionLabel>Data</SectionLabel>
-      <RowGroup>
-        <RowLink
-          label={`Garmin & ${PHONE_HEALTH.name}`}
-          value={current?.dataSource === 'mock' ? 'demo data' : current?.dataSource === 'garmin_api' ? 'Garmin direct' : current?.healthConnectConnected ? 'connected' : 'not connected'}
-          onPress={() => router.push('/edit/health')}
-        />
-        <RowLink label="Notifications" value={notificationMinutes === null ? undefined : formatTimeOfDay12h(notificationMinutes)} onPress={() => router.push('/edit/notifications')} />
-        <RowLink label="Sleep & step goals" onPress={() => router.push('/edit/routine')} />
-        <RowLink label="Progress photos" onPress={() => router.push('/edit/photos')} />
-        <RowLink label="Backup & restore" onPress={() => router.push('/edit/backup')} />
-      </RowGroup>
+      <M3Enter index={2}>
+        <SectionLabel>Data</SectionLabel>
+        <RowGroup>
+          <RowLink
+            icon={<HeartIcon color={colors.tertiary} size={18} />}
+            label={`Garmin & ${PHONE_HEALTH.name}`}
+            value={current?.dataSource === 'mock' ? 'demo data' : current?.dataSource === 'garmin_api' ? 'Garmin direct' : current?.healthConnectConnected ? 'connected' : 'not connected'}
+            onPress={() => router.push('/edit/health')}
+          />
+          <RowLink icon={<TodayIcon color={colors.tertiary} size={18} />} label="Notifications" value={notificationMinutes === null ? undefined : formatTimeOfDay12h(notificationMinutes)} onPress={() => router.push('/edit/notifications')} />
+          <RowLink icon={<CalendarIcon color={colors.tertiary} size={18} />} label="Sleep & step goals" onPress={() => router.push('/edit/routine')} />
+          <RowLink icon={<ProgressIcon color={colors.tertiary} size={18} />} label="Progress photos" onPress={() => router.push('/edit/photos')} />
+          <RowLink icon={<GearIcon color={colors.tertiary} size={18} />} label="Backup & restore" onPress={() => router.push('/edit/backup')} />
+        </RowGroup>
+      </M3Enter>
 
-      <SectionLabel>About</SectionLabel>
-      <Card>
-        <Body dim>{DISCLAIMER}</Body>
-        <Body dim>Version {Constants.expoConfig?.version}. All data is stored only on this phone. Exercise frames: free-exercise-db (public domain). Food values: IFCT 2017 where available; dishes are estimates.</Body>
-      </Card>
+      <M3Enter index={3}>
+        <SectionLabel>About</SectionLabel>
+        <Card tone="low">
+          <Body dim>{DISCLAIMER}</Body>
+          <Body dim>Version {Constants.expoConfig?.version}. All data is stored only on this phone. Exercise frames: free-exercise-db (public domain). Food values: IFCT 2017 where available; dishes are estimates.</Body>
+        </Card>
+      </M3Enter>
     </Screen>
   );
 }

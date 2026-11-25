@@ -32,6 +32,30 @@ describe('sleepScore', () => {
     expect(s.score).toBe(100);
   });
 
+  it('shows the source’s own score when it sent one, keeping ours beside it', () => {
+    const n = night(at(23, 0, 9), at(5, 0)); // 6 h, no stages: ours scores 75
+    const ours = sleepScore(n, 480, null);
+    expect(ours.score).toBe(75);
+    expect(ours.scoreSource).toBe('headroom');
+    expect(ours.computedScore).toBe(75);
+
+    const garmin = sleepScore(n, 480, null, 64);
+    expect(garmin.score).toBe(64);
+    expect(garmin.scoreSource).toBe('garmin');
+    expect(garmin.computedScore).toBe(75);
+    // The breakdown stays ours, so the screen can still explain the night.
+    expect(garmin.components.duration.points).toBe(ours.components.duration.points);
+  });
+
+  it('falls back to our own score when the source sent nothing usable', () => {
+    const n = night(at(23, 0, 9), at(5, 0));
+    for (const provided of [null, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const s = sleepScore(n, 480, null, provided);
+      expect(s.score).toBe(75);
+      expect(s.scoreSource).toBe('headroom');
+    }
+  });
+
   it('re-weights when there are no stages or baseline', () => {
     const n = night(at(23, 0, 9), at(5, 0)); // 6 h, no stages
     const s = sleepScore(n, 480, null);

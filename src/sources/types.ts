@@ -19,6 +19,11 @@ export interface SourceSleep {
   startMs: number;
   endMs: number;
   stages: { start: number; end: number; stage: number }[];
+  /**
+   * The source's own sleep score out of 100, when it publishes one. Garmin does; Health Connect
+   * and Apple Health do not, and send null, which leaves Headroom's own calculation in charge.
+   */
+  score: number | null;
 }
 
 export interface SourceDaily {

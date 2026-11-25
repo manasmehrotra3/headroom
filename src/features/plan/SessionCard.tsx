@@ -1,17 +1,31 @@
+/**
+ * Material 3 Expressive Session Card with an attached SplitButton (`Start` | `▾`)
+ * so starting a workout and moving/skipping it sit in one unified tactile control.
+ */
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { TUNABLES } from '@/config/tunables';
 import { todayKey, WEEKDAY_LABELS, weekdayOf } from '@/domain/dates';
 import type { PlannedSession } from '@/domain/plan/types';
 import { SESSION_TYPES } from '@/domain/schedule';
 import { beginWorkout } from '@/features/workout/startWorkout';
+import { Chip } from '@/ui/cards';
+import { SplitButton } from '@/ui/expressive';
 import { formatShortDate } from '@/ui/format';
-import { colors, font, radius, space, TAP_MIN } from '@/ui/theme';
+import { M3_LAYOUT, M3Pressable } from '@/ui/motion';
+import { colors, font, radius, space } from '@/ui/theme';
 
-const STATUS_LABEL: Record<PlannedSession['status'], string> = { planned: '', done: 'Done', skipped: 'Skipped', sick: 'Sick day', travel: 'Travel', dropped: 'Dropped' };
+const STATUS_LABEL: Record<PlannedSession['status'], string> = {
+  planned: '',
+  done: 'Done',
+  skipped: 'Skipped',
+  sick: 'Sick day',
+  travel: 'Travel',
+  dropped: 'Dropped',
+};
 
-/** One day of the plan on the Train tab, with the right primary action for its type. */
 export function SessionCard({ session, isToday, onActions }: { session: PlannedSession; isToday: boolean; onActions: () => void }) {
   const type = SESSION_TYPES[session.sessionType];
   const missed = session.status === 'planned' && session.date < todayKey() && !isToday;
@@ -19,7 +33,6 @@ export function SessionCard({ session, isToday, onActions }: { session: PlannedS
   const title = session.detail.kind === 'run' || session.detail.kind === 'bike' || session.detail.kind === 'swim' ? session.detail.title : type.label;
   const variant = session.variant === 'easy' ? 'easy version' : session.variant === 'deload' ? 'deload' : null;
 
-  /** Tapping the card opens the whole plan for that day: runs and rides already have their own screens. */
   const openDetail = () => {
     if (session.detail.kind === 'run') router.push(`/run/${session.id}`);
     else if (session.detail.kind === 'bike') router.push(`/ride/${session.id}`);
@@ -42,6 +55,7 @@ export function SessionCard({ session, isToday, onActions }: { session: PlannedS
   };
 
   const canStart = !inactive && session.sessionType !== 'rest';
+  const canManage = session.status === 'planned' && !missed;
   const startLabel =
     session.detail.kind === 'run'
       ? 'View run'
@@ -50,67 +64,125 @@ export function SessionCard({ session, isToday, onActions }: { session: PlannedS
         : session.detail.kind === 'swim'
           ? 'View swim'
           : session.detail.kind === 'tennis'
-          ? 'Log tennis'
-          : session.detail.kind === 'rest'
-            ? ''
-            : 'Start';
+            ? 'Log tennis'
+            : session.detail.kind === 'rest'
+              ? ''
+              : 'Start workout';
+
+  const statusText = missed ? 'Not done' : STATUS_LABEL[session.status];
+  const cardBg = isToday && !inactive ? colors.surfaceHigh : colors.surface;
 
   return (
-    <View style={[styles.card, isToday && styles.today, inactive && styles.inactive]}>
-      <Pressable onPress={openDetail} accessibilityRole="button" accessibilityLabel={`${title}: see the full plan`} style={styles.body}>
+    <Animated.View layout={M3_LAYOUT} style={[styles.card, { backgroundColor: cardBg }, isToday && !inactive && styles.todayCard, inactive && styles.inactive]}>
+      <M3Pressable
+        onPress={openDetail}
+        accessibilityRole="button"
+        accessibilityLabel={`${title}: see the full plan`}
+        haptic="tap"
+        scaleTo={0.985}
+        style={styles.body}
+      >
         <View style={styles.row}>
-          <Text style={[styles.day, isToday && { color: colors.accent }]}>
+          <Text style={[styles.day, isToday && { color: colors.primary }]}>
             {isToday ? 'TODAY · ' : `${WEEKDAY_LABELS[weekdayOf(session.date)].slice(0, 3).toUpperCase()} · `}
-            {formatShortDate(session.date).replace(/^\w+, /, '')}
+            {formatShortDate(session.date).replace(/^\w+, /, '').toUpperCase()}
           </Text>
-          <Text style={styles.status}>{missed ? 'Not done' : STATUS_LABEL[session.status]}</Text>
+          {statusText ? (
+            <Chip
+              label={statusText}
+              tone={session.status === 'done' ? 'accent' : missed ? 'warning' : 'neutral'}
+            />
+          ) : session.sessionType !== 'rest' ? (
+            <Chip label={`${session.targetMin} min`} tone={isToday ? 'accent' : 'neutral'} />
+          ) : null}
         </View>
+
         <Text style={[styles.title, inactive && { textDecorationLine: 'line-through' }]}>{title}</Text>
+
         <Text style={styles.meta}>
-          {session.sessionType === 'rest' ? 'Rest' : `${session.targetMin} min`}
+          {session.sessionType === 'rest' ? 'Rest day' : `${session.targetMin} min`}
           {variant ? ` · ${variant}` : ''}
           {session.addOn ? ` · +${TUNABLES.plan.addOnMin} min core add-on` : ''}
           {session.movedFrom ? ` · moved from ${WEEKDAY_LABELS[weekdayOf(session.movedFrom)]}` : ''}
         </Text>
-        {session.detail.kind === 'run' || session.detail.kind === 'bike' || session.detail.kind === 'swim' ? <Text style={styles.meta}>{session.detail.summary}</Text> : null}
-        {session.reason ? <Text style={styles.reason}>{session.reason}</Text> : null}
-        <Text style={styles.more}>Tap for the full plan ›</Text>
-      </Pressable>
+
+        {session.detail.kind === 'run' || session.detail.kind === 'bike' || session.detail.kind === 'swim' ? (
+          <Text style={styles.meta}>{session.detail.summary}</Text>
+        ) : null}
+
+        {session.reason ? (
+          <View style={styles.reasonPill}>
+            <Text style={styles.reason}>✦ {session.reason}</Text>
+          </View>
+        ) : null}
+
+        <Text style={styles.more}>Tap for full plan ›</Text>
+      </M3Pressable>
+
       <View style={styles.actions}>
         {canStart ? (
-          <Pressable onPress={primary} style={[styles.button, styles.buttonPrimary]}>
-            <Text style={[styles.buttonText, { color: colors.accentText }]}>{startLabel}</Text>
-          </Pressable>
+          <SplitButton
+            label={startLabel}
+            onPrimary={primary}
+            onMenu={canManage ? onActions : undefined}
+            tone={isToday ? 'primary' : 'tonal'}
+            menuAccessibilityLabel="Move or skip session"
+          />
+        ) : canManage ? (
+          <M3Pressable onPress={onActions} haptic="tap" style={styles.tonalPill}>
+            <Text style={styles.tonalPillText}>Move / skip…</Text>
+          </M3Pressable>
         ) : null}
+
         {session.status === 'done' && (session.detail.kind === 'run' || session.detail.kind === 'bike') ? (
-          <Pressable onPress={() => router.push(session.detail.kind === 'bike' ? `/ride/${session.id}` : `/run/${session.id}`)} style={styles.button}>
-            <Text style={styles.buttonText}>Planned vs actual</Text>
-          </Pressable>
-        ) : null}
-        {session.status === 'planned' && !missed ? (
-          <Pressable onPress={onActions} style={styles.button}>
-            <Text style={styles.buttonText}>Move / skip…</Text>
-          </Pressable>
+          <M3Pressable
+            onPress={() => router.push(session.detail.kind === 'bike' ? `/ride/${session.id}` : `/run/${session.id}`)}
+            haptic="tap"
+            style={styles.tonalPill}
+          >
+            <Text style={styles.tonalPillText}>Planned vs actual</Text>
+          </M3Pressable>
         ) : null}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: space.lg, marginBottom: space.md, gap: space.xs },
-  today: { borderColor: colors.accentDim },
-  body: { gap: space.xs },
-  more: { color: colors.textDim, fontSize: font.small, marginTop: space.xs },
-  inactive: { opacity: 0.7 },
-  row: { flexDirection: 'row', justifyContent: 'space-between' },
-  day: { color: colors.textDim, fontSize: font.small, fontWeight: '600', letterSpacing: 0.6 },
-  status: { color: colors.warning, fontSize: font.small, fontWeight: '600' },
-  title: { color: colors.text, fontSize: font.large, fontWeight: '600' },
-  meta: { color: colors.textDim, fontSize: font.small },
-  reason: { color: colors.info, fontSize: font.small, marginTop: space.xs },
-  actions: { flexDirection: 'row', gap: space.sm, marginTop: space.sm, flexWrap: 'wrap' },
-  button: { minHeight: 44, paddingHorizontal: space.lg, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, justifyContent: 'center' },
-  buttonPrimary: { backgroundColor: colors.accent, borderColor: colors.accent, minHeight: TAP_MIN - 8 },
-  buttonText: { color: colors.text, fontSize: font.body, fontWeight: '600' },
+  card: {
+    borderRadius: radius.xl,
+    padding: space.lg,
+    marginBottom: space.md,
+    gap: space.xs,
+  },
+  todayCard: {
+    borderWidth: 1.5,
+    borderColor: colors.primaryContainer,
+  },
+  body: { gap: 5 },
+  more: { color: colors.onSurfaceVariant, fontSize: font.caption + 1, fontWeight: '600', marginTop: 2 },
+  inactive: { opacity: 0.68 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: space.sm },
+  day: { color: colors.onSurfaceVariant, fontSize: font.caption + 1, fontWeight: '700', letterSpacing: 0.8 },
+  title: { color: colors.onSurface, fontSize: font.large + 2, fontWeight: '800', letterSpacing: -0.2 },
+  meta: { color: colors.onSurfaceVariant, fontSize: font.small, lineHeight: 19 },
+  reasonPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.tertiaryContainer,
+    borderRadius: radius.md,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginTop: 4,
+  },
+  reason: { color: colors.onTertiaryContainer, fontSize: font.small - 1, fontWeight: '600' },
+  actions: { marginTop: space.sm, gap: space.sm },
+  tonalPill: {
+    minHeight: 46,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.pill,
+    backgroundColor: colors.secondaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tonalPillText: { color: colors.onSecondaryContainer, fontSize: font.body, fontWeight: '700' },
 });

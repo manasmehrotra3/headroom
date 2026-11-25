@@ -1,3 +1,4 @@
+import { recipeForDish } from '../../data/dishRecipes';
 import { SEED_FOODS, toFoodItems, GROCERY_BY_DISH } from '../../data/foods';
 import { addDays } from '../dates';
 import { allowedDishes, dayTotals, generateMealPlan, groceryList, portionFor, swapCandidates } from './mealPlan';
@@ -9,12 +10,11 @@ const prefs = { eatsEggs: false, wheyOk: true, dislikedFoods: [] };
 const WEEK = '2026-09-07';
 
 describe('seed food data', () => {
-  it('has around 150 foods with unique ids and sane macros', () => {
-    expect(SEED_FOODS.length).toBeGreaterThanOrEqual(140);
+  it('has around 150+ foods with unique ids and sane macros', () => {
+    expect(SEED_FOODS.length).toBeGreaterThanOrEqual(190);
     expect(new Set(SEED_FOODS.map((f) => f.id)).size).toBe(SEED_FOODS.length);
     for (const f of SEED_FOODS) {
       const fromMacros = f.protein100 * 4 + f.carbs100 * 4 + f.fat100 * 9;
-      // Calories should roughly match the 4/4/9 rule (fibre and rounding allow some slack).
       expect(Math.abs(fromMacros - f.kcal100)).toBeLessThan(Math.max(40, f.kcal100 * 0.25));
       expect(f.servings.length).toBeGreaterThan(0);
       expect(f.servings.some((s) => s.isDefault)).toBe(true);
@@ -26,6 +26,15 @@ describe('seed food data', () => {
       expect(dishes.filter((d) => d.isDish && d.slots.includes(slot)).length).toBeGreaterThanOrEqual(8);
     }
     expect(dishes.filter((d) => d.tags.includes('protein_anchor')).length).toBeGreaterThanOrEqual(25);
+  });
+
+  it('provides a complete recipe for every planned dish', () => {
+    for (const d of dishes.filter((f) => f.isDish)) {
+      const recipe = recipeForDish(d.id, d.name, GROCERY_BY_DISH[d.id] ?? []);
+      expect(recipe.steps.length).toBeGreaterThan(0);
+      expect(recipe.prepMin).toBeGreaterThan(0);
+      expect(recipe.region.length).toBeGreaterThan(0);
+    }
   });
 });
 
@@ -50,11 +59,17 @@ describe('generateMealPlan', () => {
     expect(plan.filter((m) => m.slot === 'dinner')).toHaveLength(7);
   });
 
-  it('never repeats a dish within 3 days', () => {
-    for (const meal of plan) {
-      const dayIndex = (date: string) => Math.round((new Date(date).getTime() - new Date(WEEK).getTime()) / 86400000);
-      const clash = plan.find((m) => m !== meal && m.foodId === meal.foodId && Math.abs(dayIndex(m.date) - dayIndex(meal.date)) < 3);
-      expect(clash).toBeUndefined();
+  it('never repeats a dish within 7 days', () => {
+    const ids = plan.map((m) => m.foodId);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('avoids repeating dishes from the previous week on early days', () => {
+    const lastWeekIds = plan.slice(-12).map((m) => m.foodId);
+    const nextWeek = generateMealPlan(addDays(WEEK, 7), dishes, prefs, () => targets, 2, lastWeekIds);
+    const firstThreeDays = nextWeek.filter((m) => m.date < addDays(WEEK, 10));
+    for (const m of firstThreeDays) {
+      expect(lastWeekIds).not.toContain(m.foodId);
     }
   });
 

@@ -1,6 +1,5 @@
 /**
- * The trends card: a range picker, and a chart you swipe between weight and steps.
- * Weight draws the 7-day average as the line with each weigh-in as a dot behind it.
+ * Trends card: M3 Expressive ConnectedButtonGroup range picker + swipeable Weight & Steps area charts.
  */
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
@@ -43,12 +42,12 @@ export function TrendsCard({
   const pages = [
     {
       title: 'Weight',
-      caption: weightPoints.length ? `7-day average, lb · ${weightPoints.at(-1)!.value.toFixed(1)} now` : '7-day average, lb',
+      caption: weightPoints.length ? `7-day avg · ${weightPoints.at(-1)!.value.toFixed(1)} lb` : '7-day average, lb',
       chart: <AreaTrendChart points={weightPoints} dots={weightDots} formatValue={(v) => v.toFixed(1)} />,
     },
     {
       title: 'Steps',
-      caption: averageSteps === null ? `${range === '1M' ? 'Daily' : 'Weekly average'}` : `${range === '1M' ? 'Daily' : 'Weekly average'} · ${formatCompact(averageSteps)} a day`,
+      caption: averageSteps === null ? `${range === '1M' ? 'Daily' : 'Weekly average'}` : `${range === '1M' ? 'Daily' : 'Weekly average'} · ${formatCompact(averageSteps)} / day`,
       chart: <AreaTrendChart points={stepPoints} goal={{ value: stepGoal, label: `goal ${formatCompact(stepGoal)}` }} formatValue={formatCompact} />,
     },
   ];
@@ -89,15 +88,13 @@ export function TrendsCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: radius.xl,
     padding: space.lg,
     marginBottom: space.md,
   },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm, marginBottom: space.md },
-  title: { color: colors.text, fontSize: font.large, fontWeight: '700' },
-  pageTitle: { color: colors.text, fontSize: font.body, fontWeight: '600', marginBottom: space.xs },
-  pageCaption: { color: colors.textDim, fontSize: font.small, fontWeight: '400' },
+  title: { color: colors.onSurface, fontSize: font.large + 1, fontWeight: '800' },
+  pageTitle: { color: colors.onSurface, fontSize: font.body, fontWeight: '700', marginBottom: space.xs },
+  pageCaption: { color: colors.onSurfaceVariant, fontSize: font.small, fontWeight: '400' },
   pager: { alignItems: 'center', marginTop: space.sm },
 });

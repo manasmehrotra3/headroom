@@ -137,6 +137,8 @@ export interface GarminSleepSummary {
   lightSleepSeconds?: number | null;
   remSleepSeconds?: number | null;
   awakeSleepSeconds?: number | null;
+  /** Garmin's own sleep score. `overall.value` is the 0-100 number Garmin Connect shows. */
+  sleepScores?: { overall?: { value?: number | null } | null } | null;
 }
 
 /**
@@ -171,7 +173,7 @@ export function mapSleep(list: readonly GarminSleepSummary[] | null | undefined)
       cursor += ms;
     }
 
-    return [{ externalId: `garmin:sleep:${night.calendarDate ?? startMs}`, startMs, endMs, stages }];
+    return [{ externalId: `garmin:sleep:${night.calendarDate ?? startMs}`, startMs, endMs, stages, score: rounded(night.sleepScores?.overall?.value) }];
   });
 }
 

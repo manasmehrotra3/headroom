@@ -36,6 +36,13 @@
       "when": 1789147616591,
       "tag": "0004_grey_gauntlet",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1795648323833,
+      "tag": "0005_special_maggott",
+      "breakpoints": true
     }
   ]
 }

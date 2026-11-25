@@ -1,25 +1,35 @@
 /**
- * Small bar and line charts drawn with react-native-svg. Enough for trends; no extra
- * dependencies, and they render offline.
+ * Material 3 Expressive charts drawn with react-native-svg + native fade entrance.
+ * Uses Material You Ocean tonal containers (`surfaceContainer`, `primary`, `tertiary`).
  */
 import { useId, useState } from 'react';
 import { Text, View, type LayoutChangeEvent } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 
 import { areaPath, labelIndexesByX, makeScale, smoothPath } from './chartGeometry';
-
 import { colors, radius, space } from './theme';
 
-const HEIGHT = 150;
-const PAD = { top: 8, right: 8, bottom: 22, left: 40 };
+const HEIGHT = 156;
+const PAD = { top: 10, right: 8, bottom: 22, left: 40 };
 
 function Measured({ children }: { children: (width: number) => React.ReactNode }) {
   const [width, setWidth] = useState(0);
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
   return (
-    <View onLayout={onLayout} style={{ backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: space.md, marginBottom: space.md, overflow: 'hidden' }}>
+    <Animated.View
+      entering={FadeIn.duration(260)}
+      onLayout={onLayout}
+      style={{
+        backgroundColor: colors.surface,
+        borderRadius: radius.xl,
+        padding: space.md,
+        marginBottom: space.md,
+        overflow: 'hidden',
+      }}
+    >
       {width > 0 ? children(width - space.md * 2) : null}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -40,8 +50,8 @@ function Axes({ width, yMin, yMax, formatY }: { width: number; yMin: number; yMa
         const y = PAD.top + plotH - ((t - yMin) / (yMax - yMin || 1)) * plotH;
         return (
           <G key={i}>
-            <Line x1={PAD.left} x2={width - PAD.right} y1={y} y2={y} stroke={colors.border} strokeWidth={1} />
-            <SvgText x={PAD.left - 6} y={y + 4} fill={colors.textDim} fontSize={10} textAnchor="end">
+            <Line x1={PAD.left} x2={width - PAD.right} y1={y} y2={y} stroke={colors.outlineVariant} strokeWidth={1} opacity={0.55} />
+            <SvgText x={PAD.left - 6} y={y + 4} fill={colors.onSurfaceVariant} fontSize={10} textAnchor="end">
               {formatY(t)}
             </SvgText>
           </G>
@@ -51,7 +61,7 @@ function Axes({ width, yMin, yMax, formatY }: { width: number; yMin: number; yMa
   );
 }
 
-export function BarChartCard({ data, max, color = colors.accent }: { data: { value: number; label?: string }[]; max?: number; color?: string }) {
+export function BarChartCard({ data, max, color = colors.primary }: { data: { value: number; label?: string }[]; max?: number; color?: string }) {
   const yMax = max ?? niceMax(Math.max(0, ...data.map((d) => d.value)));
   const labelEvery = Math.max(1, Math.ceil(data.length / 7));
   return (
@@ -60,7 +70,7 @@ export function BarChartCard({ data, max, color = colors.accent }: { data: { val
         const plotW = width - PAD.left - PAD.right;
         const plotH = HEIGHT - PAD.top - PAD.bottom;
         const slot = data.length > 0 ? plotW / data.length : plotW;
-        const barW = Math.max(2, slot * 0.7);
+        const barW = Math.max(4, slot * 0.68);
         return (
           <Svg width={width} height={HEIGHT}>
             <Axes width={width} yMin={0} yMax={yMax} formatY={(v) => String(Math.round(v))} />
@@ -69,9 +79,9 @@ export function BarChartCard({ data, max, color = colors.accent }: { data: { val
               const x = PAD.left + i * slot + (slot - barW) / 2;
               return (
                 <G key={i}>
-                  <Rect x={x} y={PAD.top + plotH - h} width={barW} height={h} fill={color} rx={2} />
+                  <Rect x={x} y={PAD.top + plotH - h} width={barW} height={h} fill={color} rx={Math.min(6, barW / 2)} />
                   {d.label && i % labelEvery === 0 ? (
-                    <SvgText x={x + barW / 2} y={HEIGHT - 6} fill={colors.textDim} fontSize={10} textAnchor="middle">
+                    <SvgText x={x + barW / 2} y={HEIGHT - 6} fill={colors.onSurfaceVariant} fontSize={10} textAnchor="middle">
                       {d.label}
                     </SvgText>
                   ) : null}
@@ -85,7 +95,6 @@ export function BarChartCard({ data, max, color = colors.accent }: { data: { val
   );
 }
 
-/** Splits a series with gaps into unbroken runs, so each run can be drawn as its own curve. */
 function contiguousRuns(values: (number | null)[]): { index: number; value: number }[][] {
   const runs: { index: number; value: number }[][] = [];
   let current: { index: number; value: number }[] = [];
@@ -101,17 +110,12 @@ function contiguousRuns(values: (number | null)[]): { index: number; value: numb
   return runs;
 }
 
-/**
- * A line chart with axes, for detail screens. The line is smoothed through every reading with a
- * soft shaded area under it, matching the trend card on Today; a gap in the data breaks the line
- * rather than bridging it. The optional secondary series is drawn as a dotted trail of readings.
- */
 export function LineChartCard({
   series,
   labels,
-  color = colors.accent,
+  color = colors.primary,
   secondary,
-  secondaryColor = colors.textDim,
+  secondaryColor = colors.tertiary,
   yMin,
   yMax,
   formatY = (v) => String(Math.round(v)),
@@ -130,7 +134,7 @@ export function LineChartCard({
   if (all.length === 0) {
     return (
       <Measured>
-        {() => <Text style={{ color: colors.textDim }}>No data yet.</Text>}
+        {() => <Text style={{ color: colors.onSurfaceVariant }}>No data yet.</Text>}
       </Measured>
     );
   }
@@ -158,27 +162,26 @@ export function LineChartCard({
           <Svg width={width} height={HEIGHT}>
             <Defs>
               <LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0" stopColor={color} stopOpacity="0.28" />
+                <Stop offset="0" stopColor={color} stopOpacity="0.30" />
                 <Stop offset="1" stopColor={color} stopOpacity="0" />
               </LinearGradient>
             </Defs>
             <Axes width={width} yMin={lo} yMax={hi} formatY={formatY} />
             {secondary
-              ? secondary.map((v, i) => (v === null ? null : <Circle key={`s${i}`} cx={x(i)} cy={y(v)} r={1.8} fill={secondaryColor} opacity={0.8} />))
+              ? secondary.map((v, i) => (v === null ? null : <Circle key={`s${i}`} cx={x(i)} cy={y(v)} r={2.2} fill={secondaryColor} opacity={0.65} />))
               : null}
             {runs.map((run, r) =>
               run.length > 1 ? <Path key={`a${r}`} d={areaPath(run, top, bottom)} fill={`url(#${gradientId})`} /> : null,
             )}
             {runs.map((run, r) =>
               run.length > 1 ? (
-                <Path key={`l${r}`} d={smoothPath(run, top, bottom)} stroke={color} strokeWidth={2.25} fill="none" strokeLinecap="round" />
+                <Path key={`l${r}`} d={smoothPath(run, top, bottom)} stroke={color} strokeWidth={2.75} fill="none" strokeLinecap="round" />
               ) : (
-                <Circle key={`l${r}`} cx={run[0].x} cy={run[0].y} r={3.5} fill={color} />
+                <Circle key={`l${r}`} cx={run[0].x} cy={run[0].y} r={4} fill={color} />
               ),
             )}
             {labelled.map((i) => (
-              // The last label sits against the right edge, so it hangs left instead of centring and clipping.
-              <SvgText key={i} x={x(i)} y={HEIGHT - 6} fill={colors.textDim} fontSize={10} textAnchor={i === labels.length - 1 ? 'end' : 'middle'}>
+              <SvgText key={i} x={x(i)} y={HEIGHT - 6} fill={colors.onSurfaceVariant} fontSize={10} textAnchor={i === labels.length - 1 ? 'end' : 'middle'}>
                 {labels[i]}
               </SvgText>
             ))}
@@ -190,20 +193,11 @@ export function LineChartCard({
 }
 
 export interface TrendPoint {
-  /** Any increasing number: a day index, epoch ms. Points need not be evenly spaced. */
   x: number;
   value: number;
-  /** Shown under the point when it is one of the labelled ones. */
   label: string;
 }
 
-/**
- * A smooth line over a soft shaded area, with values written above a handful of points and
- * their labels underneath. Optional extras: raw readings drawn as a dotted trail behind the
- * line, and a dashed goal line.
- *
- * Draws no card of its own, so it sits inside whatever card holds it.
- */
 export function AreaTrendChart({
   points,
   dots,
@@ -225,7 +219,7 @@ export function AreaTrendChart({
   if (points.length === 0) {
     return (
       <View style={{ height, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: colors.textDim }}>Nothing to show for this range yet.</Text>
+        <Text style={{ color: colors.onSurfaceVariant }}>Nothing to show for this range yet.</Text>
       </View>
     );
   }
@@ -241,7 +235,6 @@ export function AreaTrendChart({
   const x = makeScale(Math.min(...xs), Math.max(...xs), side, Math.max(side + 1, width - side));
 
   const plotted = points.map((p) => ({ x: x(p.x), y: y(p.value) }));
-  // Picked by on-screen position so uneven readings don't bunch labels; 46px fits "Aug 12".
   const labelled = labelIndexesByX(
     plotted.map((p) => p.x),
     labelCount,
@@ -254,26 +247,26 @@ export function AreaTrendChart({
         <Svg width={width} height={height}>
           <Defs>
             <LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={colors.accent} stopOpacity="0.32" />
-              <Stop offset="1" stopColor={colors.accent} stopOpacity="0" />
+              <Stop offset="0" stopColor={colors.primary} stopOpacity="0.32" />
+              <Stop offset="1" stopColor={colors.primary} stopOpacity="0" />
             </LinearGradient>
           </Defs>
 
           {goal ? (
             <G>
-              <Line x1={side} x2={width - side} y1={y(goal.value)} y2={y(goal.value)} stroke={colors.textDim} strokeWidth={1} strokeDasharray="4 5" opacity={0.7} />
-              <SvgText x={width - side} y={y(goal.value) - 6} fill={colors.textDim} fontSize={10} textAnchor="end">
+              <Line x1={side} x2={width - side} y1={y(goal.value)} y2={y(goal.value)} stroke={colors.outline} strokeWidth={1} strokeDasharray="4 5" opacity={0.7} />
+              <SvgText x={width - side} y={y(goal.value) - 6} fill={colors.onSurfaceVariant} fontSize={10} textAnchor="end">
                 {goal.label}
               </SvgText>
             </G>
           ) : null}
 
           {(dots ?? []).map((d, i) => (
-            <Circle key={`d${i}`} cx={x(d.x)} cy={y(d.value)} r={1.8} fill="rgba(255,255,255,0.4)" />
+            <Circle key={`d${i}`} cx={x(d.x)} cy={y(d.value)} r={2.2} fill={colors.tertiary} opacity={0.55} />
           ))}
 
           {plotted.length > 1 ? <Path d={areaPath(plotted, top, bottom)} fill={`url(#${gradientId})`} /> : null}
-          <Path d={smoothPath(plotted, top, bottom)} stroke={colors.accent} strokeWidth={2.5} fill="none" strokeLinecap="round" />
+          <Path d={smoothPath(plotted, top, bottom)} stroke={colors.primary} strokeWidth={2.75} fill="none" strokeLinecap="round" />
 
           {labelled.map((i) => {
             const p = plotted[i];
@@ -281,11 +274,11 @@ export function AreaTrendChart({
             const nudge = anchor === 'start' ? -6 : anchor === 'end' ? 6 : 0;
             return (
               <G key={`l${i}`}>
-                <Circle cx={p.x} cy={p.y} r={5} fill={colors.accent} stroke={colors.background} strokeWidth={2} />
-                <SvgText x={p.x + nudge} y={p.y - 11} fill={colors.text} fontSize={11} fontWeight="600" textAnchor={anchor}>
+                <Circle cx={p.x} cy={p.y} r={5} fill={colors.primary} stroke={colors.surface} strokeWidth={2.5} />
+                <SvgText x={p.x + nudge} y={p.y - 11} fill={colors.onSurface} fontSize={11} fontWeight="700" textAnchor={anchor}>
                   {formatValue(points[i].value)}
                 </SvgText>
-                <SvgText x={p.x + nudge} y={height - 6} fill={colors.textDim} fontSize={11} textAnchor={anchor}>
+                <SvgText x={p.x + nudge} y={height - 6} fill={colors.onSurfaceVariant} fontSize={11} textAnchor={anchor}>
                   {points[i].label}
                 </SvgText>
               </G>

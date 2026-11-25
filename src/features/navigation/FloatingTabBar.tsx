@@ -1,21 +1,24 @@
 /**
- * The floating tab bar: a rounded pill hovering above the content with the active tab's icon in
- * a soft glowing circle, and a separate round + button beside it for quick logging.
+ * Material 3 Expressive Floating Toolbar + Gliding Spring Pill + Morphing FAB Menu trigger.
  *
- * Settings is still a route in the tab group, so it keeps the tab bar when opened, but it is not
- * shown as a tab: it lives behind the gear on each screen's header instead.
+ * - Floating pill container (`colors.toolbar`) hovers above a smooth Ocean bottom fade.
+ * - A single `primaryContainer` indicator pill glides smoothly between tabs on the native UI
+ *   thread using `EXPRESSIVE_SPRING`.
+ * - Trailing Expressive FAB (`colors.primary`) morphs from a 20dp squircle to a full circle
+ *   and rotates 45deg into a close icon when opening the anchored FAB Menu.
  */
 import type { BottomTabBarProps } from 'expo-router/tabs';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useEffect, useState, type ComponentType } from 'react';
+import { StyleSheet, Text, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { FoodIcon, PlusIcon, ProgressIcon, TodayIcon, TrainIcon } from '@/ui/icons';
-import { colors, font, radius, space } from '@/ui/theme';
+import { EXPRESSIVE_FAST_SPRING, EXPRESSIVE_SPRING, M3Pressable } from '@/ui/motion';
+import { colors, radius, space } from '@/ui/theme';
 
 import { QuickAddSheet } from './QuickAddSheet';
 
-/** Tabs shown in the pill, in order. Anything else in the tab group is reachable but hidden. */
 const VISIBLE_TABS = [
   { name: 'index', label: 'Today', Icon: TodayIcon },
   { name: 'train', label: 'Train', Icon: TrainIcon },
@@ -23,15 +26,75 @@ const VISIBLE_TABS = [
   { name: 'progress', label: 'Progress', Icon: ProgressIcon },
 ] as const;
 
+const TOOLBAR_PAD = 6;
+
 export function FloatingTabBar({ state, navigation, insets }: BottomTabBarProps) {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [toolbarWidth, setToolbarWidth] = useState(0);
   const activeName = state.routes[state.index]?.name;
+  const activeVisibleIndex = VISIBLE_TABS.findIndex((t) => t.name === activeName);
+  const bottomOffset = Math.max(insets.bottom, space.md) + space.xs;
+
+  const slotWidth = toolbarWidth > 0 ? (toolbarWidth - TOOLBAR_PAD * 2) / VISIBLE_TABS.length : 0;
+
+  const pillX = useSharedValue(0);
+  const pillOpacity = useSharedValue(activeVisibleIndex >= 0 ? 1 : 0);
+  const fabOpenProgress = useSharedValue(0);
+
+  useEffect(() => {
+    if (activeVisibleIndex >= 0 && slotWidth > 0) {
+      pillX.value = withSpring(activeVisibleIndex * slotWidth, EXPRESSIVE_SPRING);
+      pillOpacity.value = withSpring(1, EXPRESSIVE_FAST_SPRING);
+    } else if (activeVisibleIndex < 0) {
+      pillOpacity.value = withSpring(0, EXPRESSIVE_FAST_SPRING);
+    }
+  }, [activeVisibleIndex, slotWidth, pillX, pillOpacity]);
+
+  useEffect(() => {
+    fabOpenProgress.value = withSpring(quickAddOpen ? 1 : 0, EXPRESSIVE_SPRING);
+  }, [quickAddOpen, fabOpenProgress]);
+
+  const glidingPillStyle = useAnimatedStyle(() => ({
+    opacity: pillOpacity.value,
+    transform: [{ translateX: pillX.value }],
+  }));
+
+  const fabContainerStyle = useAnimatedStyle(() => ({
+    borderRadius: 20 + fabOpenProgress.value * 11,
+    transform: [{ scale: 1 - fabOpenProgress.value * 0.04 }],
+  }));
+
+  const fabIconStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${fabOpenProgress.value * 45}deg` }],
+  }));
+
+  const onToolbarLayout = (e: LayoutChangeEvent) => {
+    const w = e.nativeEvent.layout.width;
+    if (w !== toolbarWidth) {
+      setToolbarWidth(w);
+      if (activeVisibleIndex >= 0) {
+        const nextSlot = (w - TOOLBAR_PAD * 2) / VISIBLE_TABS.length;
+        pillX.value = activeVisibleIndex * nextSlot;
+      }
+    }
+  };
 
   return (
     <>
       <BottomFade />
-      <View pointerEvents="box-none" style={[styles.wrap, { bottom: Math.max(insets.bottom, space.md) + space.xs }]}>
-        <View style={styles.pill}>
+      <View pointerEvents="box-none" style={[styles.wrap, { bottom: bottomOffset }]}>
+        <View style={styles.toolbar} onLayout={onToolbarLayout}>
+          {slotWidth > 0 ? (
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.glidingPill,
+                { width: slotWidth },
+                glidingPillStyle,
+              ]}
+            />
+          ) : null}
+
           {VISIBLE_TABS.map(({ name, label, Icon }) => {
             const route = state.routes.find((r) => r.name === name);
             if (!route) return null;
@@ -44,33 +107,63 @@ export function FloatingTabBar({ state, navigation, insets }: BottomTabBarProps)
               });
               if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
             };
-            return (
-              <Pressable key={name} accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={label} onPress={onPress} style={styles.tab}>
-                <View style={[styles.iconWell, focused && styles.iconWellActive]}>
-                  <Icon color={focused ? colors.accent : colors.textDim} size={22} />
-                </View>
-                <Text style={[styles.label, focused && { color: colors.accent }]}>{label}</Text>
-              </Pressable>
-            );
+            return <ToolbarTab key={name} label={label} Icon={Icon} focused={focused} onPress={onPress} />;
           })}
         </View>
 
-        <Pressable accessibilityRole="button" accessibilityLabel="Quick add" onPress={() => setQuickAddOpen(true)} style={styles.plus}>
-          <PlusIcon color={colors.text} size={26} />
-        </Pressable>
+        <M3Pressable
+          accessibilityRole="button"
+          accessibilityLabel={quickAddOpen ? 'Close quick add menu' : 'Open quick add menu'}
+          onPress={() => setQuickAddOpen((v) => !v)}
+          haptic="medium"
+          scaleTo={0.9}
+        >
+          <Animated.View style={[styles.fab, fabContainerStyle]}>
+            <Animated.View style={fabIconStyle}>
+              <PlusIcon color={colors.onPrimary} size={26} />
+            </Animated.View>
+          </Animated.View>
+        </M3Pressable>
 
-        <QuickAddSheet visible={quickAddOpen} onClose={() => setQuickAddOpen(false)} />
+        <QuickAddSheet visible={quickAddOpen} bottomOffset={bottomOffset} onClose={() => setQuickAddOpen(false)} />
       </View>
     </>
   );
 }
 
-const FADE_HEIGHT = 150;
+function ToolbarTab({
+  label,
+  Icon,
+  focused,
+  onPress,
+}: {
+  label: string;
+  Icon: ComponentType<{ color: string; size?: number }>;
+  focused: boolean;
+  onPress: () => void;
+}) {
+  const iconColor = focused ? colors.onPrimaryContainer : colors.onSurfaceVariant;
 
-/**
- * Content scrolls underneath the floating bar, so it fades to the background just before the
- * bar instead of showing sharp text around its rounded ends.
- */
+  return (
+    <M3Pressable
+      accessibilityRole="tab"
+      accessibilityState={{ selected: focused }}
+      accessibilityLabel={label}
+      onPress={onPress}
+      haptic="select"
+      scaleTo={0.92}
+      style={styles.tab}
+    >
+      <Icon color={iconColor} size={21} />
+      <Text style={[styles.label, focused && styles.labelActive]} numberOfLines={1}>
+        {label}
+      </Text>
+    </M3Pressable>
+  );
+}
+
+const FADE_HEIGHT = 148;
+
 function BottomFade() {
   const { width } = useWindowDimensions();
   return (
@@ -86,13 +179,13 @@ function BottomFade() {
     >
       <Svg width={width} height={FADE_HEIGHT}>
         <Defs>
-          <LinearGradient id="tabBarFade" x1="0" y1="0" x2="0" y2="1">
+          <LinearGradient id="oceanTabFade" x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0" stopColor={colors.background} stopOpacity="0" />
-            <Stop offset="0.55" stopColor={colors.background} stopOpacity="0.85" />
+            <Stop offset="0.58" stopColor={colors.background} stopOpacity="0.88" />
             <Stop offset="1" stopColor={colors.background} stopOpacity="1" />
           </LinearGradient>
         </Defs>
-        <Rect x="0" y="0" width={width} height={FADE_HEIGHT} fill="url(#tabBarFade)" />
+        <Rect x="0" y="0" width={width} height={FADE_HEIGHT} fill="url(#oceanTabFade)" />
       </Svg>
     </View>
   );
@@ -105,58 +198,59 @@ const styles = StyleSheet.create({
     right: space.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.sm,
+    gap: space.sm + 2,
   },
-  pill: {
+  toolbar: {
     flex: 1,
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: colors.sheet,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.toolbar,
     borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: space.xs + 2,
-    paddingHorizontal: space.xs,
-    // A soft lift off the content underneath.
+    padding: TOOLBAR_PAD,
     shadowColor: '#000',
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
     elevation: 12,
+  },
+  glidingPill: {
+    position: 'absolute',
+    top: TOOLBAR_PAD,
+    bottom: TOOLBAR_PAD,
+    left: TOOLBAR_PAD,
+    backgroundColor: colors.primaryContainer,
+    borderRadius: radius.pill,
   },
   tab: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 60,
-    minHeight: 56,
-  },
-  iconWell: {
-    width: 40,
-    height: 32,
+    minHeight: 52,
     borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 4,
+    paddingVertical: 5,
   },
-  iconWellActive: { backgroundColor: colors.accentSoft },
   label: {
-    color: colors.textDim,
+    color: colors.onSurfaceVariant,
     fontSize: 11,
     marginTop: 2,
-    fontWeight: '500',
+    fontWeight: '600',
   },
-  plus: {
+  labelActive: {
+    color: colors.onPrimaryContainer,
+    fontWeight: '700',
+  },
+  fab: {
     width: 62,
     height: 62,
-    borderRadius: radius.pill,
-    backgroundColor: colors.sheet,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.45,
     shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 14,
   },
 });
