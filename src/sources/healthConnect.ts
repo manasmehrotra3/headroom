@@ -79,6 +79,14 @@ async function readAll<T extends RecordType>(recordType: T, options: Omit<ReadRe
   return records;
 }
 
+/**
+ * Limits a read to records Garmin Connect wrote. Used for steps, calories, distance and workouts,
+ * which the phone also records on its own (Samsung Health counts steps and auto-detects walks);
+ * mixing those in makes the numbers disagree with Garmin Connect. Heart rate, sleep, HRV, weight
+ * and VO2 max are read from every app, since the phone cannot measure those.
+ */
+const GARMIN_ONLY = { dataOriginFilter: [TUNABLES.sync.watchApp] };
+
 const between = (fromMs: number, toMs: number) =>
   ({ operator: 'between', startTime: new Date(fromMs).toISOString(), endTime: new Date(toMs).toISOString() }) as const;
 
@@ -142,13 +150,16 @@ interface SessionAccumulator extends Span {
 }
 
 /**
- * Steps and active calories per day, as Health Connect itself totals them.
+ * Steps and active calories per day, as Health Connect itself totals them for the watch app.
  *
  * Not by adding up the raw records: the store can hold the same stretch of time twice when the
  * watch re-sends it, and adding every record up counts those minutes twice. That is what pushed
- * a 5,006-step day to 5,726. Health Connect's aggregation removes the overlap and applies its own
- * app priority, so this returns exactly the number its own screens show. The iOS reader uses
- * Apple's daily statistics for the same reason.
+ * a 5,006-step day to 5,726. Health Connect's aggregation removes the overlap.
+ *
+ * Only the watch app's records count (`TUNABLES.sync.watchApp`), so the numbers match Garmin
+ * Connect. Across all apps, Health Connect fills gaps in the watch's record with steps the phone
+ * counted (Samsung Health, for one), which read 9,673 on a day Garmin Connect showed 9,087. The
+ * iOS reader uses Apple's daily statistics instead.
  *
  * A day with no records aggregates to zero, which is stored as "no data" rather than a real zero,
  * matching how the rest of the app treats a missing day.
@@ -158,6 +169,7 @@ async function dailyTotals(fromMs: number, toMs: number): Promise<Map<DateKey, {
   // range, so asking from the time of the last sync would slice days at, say, 18:40, and today's
   // steps would be filed under yesterday.
   const timeRangeFilter = between(startOfLocalDay(fromMs), toMs);
+  const timeRangeSlicer = { period: 'DAYS', length: 1 } as const;
   const byDay = new Map<DateKey, { steps: number | null; activeKcal: number | null }>();
   const forDay = (date: DateKey) => {
     const existing = byDay.get(date);
@@ -168,8 +180,8 @@ async function dailyTotals(fromMs: number, toMs: number): Promise<Map<DateKey, {
   };
 
   const [steps, calories] = await Promise.all([
-    aggregateGroupByPeriod({ recordType: 'Steps', timeRangeFilter, timeRangeSlicer: { period: 'DAYS', length: 1 } }),
-    aggregateGroupByPeriod({ recordType: 'ActiveCaloriesBurned', timeRangeFilter, timeRangeSlicer: { period: 'DAYS', length: 1 } }),
+    aggregateGroupByPeriod({ recordType: 'Steps', timeRangeFilter, timeRangeSlicer, ...GARMIN_ONLY }),
+    aggregateGroupByPeriod({ recordType: 'ActiveCaloriesBurned', timeRangeFilter, timeRangeSlicer, ...GARMIN_ONLY }),
   ]);
 
   for (const group of steps) {
@@ -192,7 +204,7 @@ export const healthConnectSource: ActivitySource = {
     // Sessions first, over the whole window. There are only a handful a day, and having them all
     // up front means a record from any chunk can be attributed to the session it belongs to even
     // when that session straddles a chunk boundary.
-    const sessions = await readAll('ExerciseSession', { timeRangeFilter: between(fromMs, toMs), ascendingOrder: true });
+    const sessions = await readAll('ExerciseSession', { timeRangeFilter: between(fromMs, toMs), ascendingOrder: true, ...GARMIN_ONLY });
     const accumulators: SessionAccumulator[] = sessions
       .map((s) => {
         const startMs = Date.parse(s.startTime);
@@ -237,11 +249,11 @@ export const healthConnectSource: ActivitySource = {
       const filter = { timeRangeFilter: between(chunk.startMs, chunk.endMs), ascendingOrder: true };
       const [hrRecords, distances, restingHr, hrv, sleeps, calories, weights, vo2Max] = await Promise.all([
         readAll('HeartRate', filter),
-        readAll('Distance', filter),
+        readAll('Distance', { ...filter, ...GARMIN_ONLY }),
         readAll('RestingHeartRate', filter),
         readAll('HeartRateVariabilityRmssd', filter),
         readAll('SleepSession', filter),
-        readAll('ActiveCaloriesBurned', filter),
+        readAll('ActiveCaloriesBurned', { ...filter, ...GARMIN_ONLY }),
         readAll('Weight', filter),
         readAll('Vo2Max', filter),
       ]);

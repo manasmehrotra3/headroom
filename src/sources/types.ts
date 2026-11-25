@@ -44,11 +44,12 @@ export interface SourceData {
 }
 
 /**
- * A place activity and recovery data comes from. Health Connect (Android) and Apple Health (iOS) are the real ones; the mock
- * source generates believable data so every screen works on an emulator. (A Strava source
- * would implement this too, if that phase is ever built.)
+ * A place activity and recovery data comes from. Health Connect (Android) and Apple Health (iOS)
+ * read what Garmin wrote into the phone; the Garmin API source reads Garmin Connect directly over
+ * the internet; the mock source generates believable data so every screen works on an emulator.
+ * (A Strava source would implement this too, if that phase is ever built.)
  */
 export interface ActivitySource {
-  id: 'health_connect' | 'apple_health' | 'mock';
+  id: 'health_connect' | 'apple_health' | 'garmin_api' | 'mock';
   read(fromMs: number, toMs: number): Promise<SourceData>;
 }

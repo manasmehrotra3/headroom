@@ -41,7 +41,7 @@ export default function RaceScreen() {
       vdot,
       estimate: estimateRaceTime(context.race.type, { vdot, bikeSpeedKmh: bikeSpeed, swimPaceSecPer100m: null }),
       gaps: raceReadiness(context, longest),
-      week: raceWeekSchedule(context.race.type),
+      week: raceWeekSchedule(context.race.type, undefined, startOfWeek(today)),
       bikeSpeed,
     };
   });

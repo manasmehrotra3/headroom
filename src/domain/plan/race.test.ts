@@ -85,6 +85,18 @@ describe('weekly template', () => {
     expect(Object.values(week).filter((t) => t.startsWith('strength'))).toHaveLength(2);
   });
 
+  it('adds two swims to the triathlon week from the week swimming starts', () => {
+    expect(Object.values(raceWeekSchedule('ironman_70_3', DEFAULT_SCHEDULE, '2026-11-30')).some((t) => t.startsWith('swim'))).toBe(false);
+
+    const week = raceWeekSchedule('ironman_70_3', DEFAULT_SCHEDULE, '2026-12-07');
+    expect(week).toEqual({ mon: 'strength_lower', tue: 'bike_quality', wed: 'run_quality', thu: 'swim_endurance', fri: 'swim_technique', sat: 'bike_long', sun: 'tennis' });
+    expect(raceWeekSchedule('ironman_70_3', DEFAULT_SCHEDULE, '2027-03-01').thu).toBe('swim_endurance');
+  });
+
+  it('leaves a running race week without swims whatever the date', () => {
+    expect(Object.values(raceWeekSchedule('half_marathon', DEFAULT_SCHEDULE, '2026-12-07')).some((t) => t.startsWith('swim'))).toBe(false);
+  });
+
   it('promotes the weekend easy run to a long run for a running race', () => {
     const week = raceWeekSchedule('half_marathon', DEFAULT_SCHEDULE);
     expect(week.sat).toBe('run_long');
@@ -114,10 +126,18 @@ describe('race context and readiness', () => {
     const ctx = raceContext(race(), TODAY);
     const gaps = raceReadiness(ctx, { rideMin: 45, runMin: 40 });
     expect(gaps.some((g) => !g.ok && g.message.includes('bike leg'))).toBe(true);
-    expect(gaps.some((g) => g.message.includes('Swimming'))).toBe(true);
-    // The bike and run checks pass; the swim line is always a gap until swimming is built.
+    expect(gaps.some((g) => !g.ok && g.message.includes('No swims recorded yet'))).toBe(true);
     const ready = raceReadiness(ctx, { rideMin: 200, runMin: 100 });
     expect(ready.slice(0, 2).every((g) => g.ok)).toBe(true);
+  });
+
+  it('judges the swim leg by the longest swim recorded', () => {
+    const ctx = raceContext(race(), TODAY);
+    const swim = (swimM: number) => raceReadiness(ctx, { rideMin: 200, runMin: 100, swimM })[2];
+    expect(swim(800)).toMatchObject({ ok: false, message: expect.stringContaining('Longest swim so far is 800 m') });
+    expect(swim(1500)).toMatchObject({ ok: true, message: expect.stringContaining('open-water practice') });
+    // A running race has no swim line at all.
+    expect(raceReadiness(raceContext(race({ type: 'half_marathon' }), TODAY), { rideMin: 0, runMin: 100 })).toHaveLength(1);
   });
 });
 

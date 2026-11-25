@@ -16,7 +16,7 @@ export function SessionCard({ session, isToday, onActions }: { session: PlannedS
   const type = SESSION_TYPES[session.sessionType];
   const missed = session.status === 'planned' && session.date < todayKey() && !isToday;
   const inactive = session.status !== 'planned' || missed;
-  const title = session.detail.kind === 'run' || session.detail.kind === 'bike' ? session.detail.title : type.label;
+  const title = session.detail.kind === 'run' || session.detail.kind === 'bike' || session.detail.kind === 'swim' ? session.detail.title : type.label;
   const variant = session.variant === 'easy' ? 'easy version' : session.variant === 'deload' ? 'deload' : null;
 
   /** Tapping the card opens the whole plan for that day: runs and rides already have their own screens. */
@@ -34,6 +34,8 @@ export function SessionCard({ session, isToday, onActions }: { session: PlannedS
     } else if (session.detail.kind === 'strength' || session.detail.kind === 'mobility') {
       const { workoutId } = beginWorkout(session.sessionType, session.variant, session.id);
       router.push(`/workout/${workoutId}`);
+    } else if (session.detail.kind === 'swim') {
+      router.push(`/plan/${session.id}`);
     } else if (session.detail.kind === 'tennis') {
       router.push('/log/activity');
     }
@@ -45,7 +47,9 @@ export function SessionCard({ session, isToday, onActions }: { session: PlannedS
       ? 'View run'
       : session.detail.kind === 'bike'
         ? 'View ride'
-        : session.detail.kind === 'tennis'
+        : session.detail.kind === 'swim'
+          ? 'View swim'
+          : session.detail.kind === 'tennis'
           ? 'Log tennis'
           : session.detail.kind === 'rest'
             ? ''
@@ -68,7 +72,7 @@ export function SessionCard({ session, isToday, onActions }: { session: PlannedS
           {session.addOn ? ` · +${TUNABLES.plan.addOnMin} min core add-on` : ''}
           {session.movedFrom ? ` · moved from ${WEEKDAY_LABELS[weekdayOf(session.movedFrom)]}` : ''}
         </Text>
-        {session.detail.kind === 'run' || session.detail.kind === 'bike' ? <Text style={styles.meta}>{session.detail.summary}</Text> : null}
+        {session.detail.kind === 'run' || session.detail.kind === 'bike' || session.detail.kind === 'swim' ? <Text style={styles.meta}>{session.detail.summary}</Text> : null}
         {session.reason ? <Text style={styles.reason}>{session.reason}</Text> : null}
         <Text style={styles.more}>Tap for the full plan ›</Text>
       </Pressable>

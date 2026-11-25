@@ -295,12 +295,12 @@ export function setSessionStatus(id: number, status: SessionStatus, activityId?:
   db.update(plannedSessions).set({ status, ...(activityId !== undefined ? { activityId } : {}) }).where(eq(plannedSessions.id, id)).run();
 }
 
-/** Marks run / tennis sessions done when a matching activity exists on that day. */
+/** Marks run, swim, tennis and strength sessions done when a matching activity exists on that day. */
 export function linkActivitiesToSessions(from: DateKey, to: DateKey): void {
   const rows = db.select().from(plannedSessions).where(and(gte(plannedSessions.date, from), lte(plannedSessions.date, to), eq(plannedSessions.status, 'planned'))).all();
   for (const row of rows) {
     const kind = SESSION_TYPES[row.sessionType].kind;
-    if (kind !== 'run' && kind !== 'tennis' && kind !== 'strength') continue;
+    if (kind !== 'run' && kind !== 'swim' && kind !== 'tennis' && kind !== 'strength') continue;
     const match = db
       .select()
       .from(activities)

@@ -271,3 +271,66 @@ describe('stability', () => {
     }
   });
 });
+
+describe('swimming in the triathlon week', () => {
+  const SWIM_WEEK = '2026-12-07'; // the Monday swimming starts
+  const triRace = raceContext({ name: '70.3', type: 'ironman_70_3', date: addDays(SWIM_WEEK, 7 * 24), priority: 'A', goalTimeSec: null }, SWIM_WEEK);
+  const swimCtx = (overrides: Partial<WeekContext> = {}) => ctx({ weekStart: SWIM_WEEK, today: SWIM_WEEK, race: triRace, weekIndex: 0, ...overrides });
+
+  it('has no swims the week before', () => {
+    const week = buildWeek(swimCtx({ weekStart: addDays(SWIM_WEEK, -7), today: addDays(SWIM_WEEK, -7) }));
+    expect(week.sessions.map((s) => s.sessionType)).toEqual(['strength_lower', 'bike_quality', 'run_quality', 'strength_upper', 'mobility', 'bike_long', 'tennis']);
+  });
+
+  it('puts an endurance swim on Thursday and a technique swim on Friday from the start week', () => {
+    const week = buildWeek(swimCtx());
+    expect(week.sessions.map((s) => s.sessionType)).toEqual(['strength_lower', 'bike_quality', 'run_quality', 'swim_endurance', 'swim_technique', 'bike_long', 'tennis']);
+    const thu = byDay(week.sessions, addDays(SWIM_WEEK, 3));
+    expect(thu.detail).toMatchObject({ kind: 'swim', focus: 'endurance', totalM: 800 });
+    expect(thu.targetMin).toBe(24);
+    expect(byDay(week.sessions, addDays(SWIM_WEEK, 4)).detail).toMatchObject({ kind: 'swim', focus: 'technique', totalM: 800 });
+  });
+
+  it('makes the swims longer as the weeks go by, and keeps them under the daily cap', () => {
+    const at = (weeks: number) => {
+      const weekStart = addDays(SWIM_WEEK, weeks * 7);
+      return byDay(buildWeek(swimCtx({ weekStart, today: weekStart })).sessions, addDays(weekStart, 3));
+    };
+    expect(at(4).targetMin).toBeGreaterThan(at(0).targetMin);
+    const late = at(20);
+    expect(late.targetMin).toBeLessThanOrEqual(50);
+    expect(late.detail.kind === 'swim' && late.detail.totalM).toBeGreaterThanOrEqual(1600);
+  });
+
+  it('swaps a swim for mobility when a shoulder hurts, and leaves the ride alone', () => {
+    const week = buildWeek(swimCtx({ painAreas: ['shoulder'] }));
+    expect(byDay(week.sessions, addDays(SWIM_WEEK, 3)).sessionType).toBe('mobility');
+    expect(byDay(week.sessions, addDays(SWIM_WEEK, 4)).sessionType).toBe('mobility');
+    expect(byDay(week.sessions, addDays(SWIM_WEEK, 1)).sessionType).toBe('bike_quality');
+    expect(week.changes.some((c) => c.reason.includes('Swim replaced with mobility because of shoulder pain'))).toBe(true);
+  });
+
+  it('keeps the swims when it is a knee that hurts', () => {
+    const week = buildWeek(swimCtx({ painAreas: ['knee'] }));
+    expect(byDay(week.sessions, addDays(SWIM_WEEK, 3)).sessionType).toBe('swim_endurance');
+  });
+
+  it('shortens the swims in a deload week and makes them technique swims', () => {
+    const normal = byDay(buildWeek(swimCtx()).sessions, addDays(SWIM_WEEK, 3));
+    const deload = byDay(buildWeek(swimCtx({ weekIndex: 3 })).sessions, addDays(SWIM_WEEK, 3));
+    expect(deload.targetMin).toBeLessThan(normal.targetMin);
+    expect(deload.detail).toMatchObject({ kind: 'swim', focus: 'technique' });
+  });
+
+  it('turns the endurance swim into a technique swim on a low-readiness day', () => {
+    const thu = byDay(buildWeek(swimCtx()).sessions, addDays(SWIM_WEEK, 3));
+    const day = { date: thu.date, readinessBand: 'low' as const, painAreas: [], painStreaks: {}, paces: null, bikeZones: null };
+    const { session, changes } = adjustForDay(thu, day);
+    expect(session.detail).toMatchObject({ kind: 'swim', focus: 'technique' });
+    expect(session.targetMin).toBe(thu.targetMin);
+    expect(changes[0].reason).toContain('Technique swim instead');
+
+    const sore = adjustForDay(thu, { ...day, readinessBand: 'good' as const, painAreas: ['shoulder'] });
+    expect(sore.session.sessionType).toBe('mobility');
+  });
+});

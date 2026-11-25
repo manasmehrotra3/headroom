@@ -4,11 +4,12 @@ import { bikeFocusForWeek, buildBikeQuality, buildEasySpin, buildLongRide } from
 import { addDays, WEEKDAYS, weekDates, weekdayOf, type DateKey } from '../dates';
 import { buildEasyRun, buildQualityRun, qualityFocusForWeek } from '../running/workouts';
 import { SESSION_TYPES, isLongSession, type SessionType } from '../schedule';
+import { buildSwim, swimTargetMin } from '../swimming/workouts';
 import { raceWeekSchedule } from './race';
 import type { DetailContext, PlannedSession, SessionDetail, WeekContext } from './types';
 
 /** Minutes each session type aims for before any rule adjusts it. */
-export function baseTargetMin(type: SessionType, ctx: Pick<WeekContext, 'lastWeekPlanned' | 'race'>): number {
+export function baseTargetMin(type: SessionType, ctx: Pick<WeekContext, 'lastWeekPlanned' | 'race' | 'weekStart'>): number {
   const p = TUNABLES.plan;
   const c = TUNABLES.cycling;
   switch (type) {
@@ -35,6 +36,13 @@ export function baseTargetMin(type: SessionType, ctx: Pick<WeekContext, 'lastWee
       return c.defaultQualityMin;
     case 'bike_easy':
       return c.defaultEasyMin;
+
+    // Swims start short and grow each week from the date swimming begins.
+    case 'swim_technique':
+      return swimTargetMin('technique', ctx.weekStart);
+    case 'swim_endurance':
+      return swimTargetMin('endurance', ctx.weekStart);
+
     case 'tennis':
       return 90;
     case 'mobility':
@@ -62,6 +70,10 @@ export function detailFor(type: SessionType, targetMin: number, ctx: DetailConte
     case 'bike_long':
       // Long rides go outdoors; tempo blocks appear once base is done.
       return buildLongRide(targetMin, ctx.race?.brickRunMin ?? 0, phase === 'build' || phase === 'peak', false);
+    case 'swim_technique':
+      return buildSwim('technique', targetMin);
+    case 'swim_endurance':
+      return buildSwim('endurance', targetMin);
     case 'strength_lower':
     case 'strength_upper':
     case 'strength_light':
@@ -82,7 +94,7 @@ export function makeSession(date: DateKey, weekStart: DateKey, type: SessionType
 
 /** The week that applies: your own template, or the race template when a race is booked. */
 export function scheduleFor(ctx: WeekContext) {
-  if (ctx.race && ctx.useRaceTemplate && ctx.race.phase !== 'off_season') return raceWeekSchedule(ctx.race.race.type, ctx.schedule);
+  if (ctx.race && ctx.useRaceTemplate && ctx.race.phase !== 'off_season') return raceWeekSchedule(ctx.race.race.type, ctx.schedule, ctx.weekStart);
   return ctx.schedule;
 }
 
@@ -94,6 +106,7 @@ export function buildBaseWeek(ctx: WeekContext): PlannedSession[] {
 
 export const isRun = (s: PlannedSession) => SESSION_TYPES[s.sessionType].kind === 'run';
 export const isBike = (s: PlannedSession) => SESSION_TYPES[s.sessionType].kind === 'bike';
+export const isSwim = (s: PlannedSession) => SESSION_TYPES[s.sessionType].kind === 'swim';
 export const isEndurance = (s: PlannedSession) => SESSION_TYPES[s.sessionType].endurance;
 export const isStrength = (s: PlannedSession) => SESSION_TYPES[s.sessionType].kind === 'strength';
 export const isHeavyLower = (s: PlannedSession) => SESSION_TYPES[s.sessionType].heavyLower && s.status === 'planned';

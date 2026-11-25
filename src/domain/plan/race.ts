@@ -11,6 +11,7 @@ import { TUNABLES } from '../../config/tunables';
 import { daysBetween, WEEKDAYS, type DateKey, type Weekday } from '../dates';
 import { predictedRaceSec } from '../running/vdot';
 import { DEFAULT_SCHEDULE, type SessionType, type WeekSchedule } from '../schedule';
+import { swimmingStarted } from '../swimming/workouts';
 import { formatDuration } from '../units';
 
 export const RACE_TYPE_IDS = ['five_k', 'ten_k', 'half_marathon', 'marathon', 'sprint_tri', 'olympic_tri', 'ironman_70_3'] as const;
@@ -136,11 +137,20 @@ export const TRI_WEEK: WeekSchedule = {
 };
 
 /**
- * The weekly template for a race. Triathlons get the dedicated tri week; running races keep
- * your own schedule with the weekend easy run promoted to a long run.
+ * The triathlon week once swimming has started. The plan holds one session a day, so each swim
+ * takes a day: the endurance swim replaces Thursday's upper-body strength (swimming works the
+ * same muscles), and an easy technique swim replaces Friday's mobility. Monday's leg strength
+ * stays. There is no full rest day in this week; Friday's swim is the easy day.
  */
-export function raceWeekSchedule(type: RaceType, base: WeekSchedule = DEFAULT_SCHEDULE): WeekSchedule {
-  if (RACE_TYPES[type].discipline === 'tri') return { ...TRI_WEEK };
+export const TRI_WEEK_WITH_SWIM: WeekSchedule = { ...TRI_WEEK, thu: 'swim_endurance', fri: 'swim_technique' };
+
+/**
+ * The weekly template for a race. Triathlons get the dedicated tri week, with swims from the
+ * week swimming starts (pass `weekStart` to get them); running races keep your own schedule
+ * with the weekend easy run promoted to a long run.
+ */
+export function raceWeekSchedule(type: RaceType, base: WeekSchedule = DEFAULT_SCHEDULE, weekStart?: DateKey): WeekSchedule {
+  if (RACE_TYPES[type].discipline === 'tri') return weekStart && swimmingStarted(weekStart) ? { ...TRI_WEEK_WITH_SWIM } : { ...TRI_WEEK };
 
   const out: WeekSchedule = { ...base };
   const weekendRun = (['sat', 'sun'] as Weekday[]).find((day) => out[day] === 'run_easy');
@@ -235,7 +245,7 @@ export interface ReadinessGap {
  * Honest check of whether the training so far matches what the race asks for: the longest
  * ride and run you've actually done against what the race needs.
  */
-export function raceReadiness(context: RaceContext, longest: { rideMin: number; runMin: number }): ReadinessGap[] {
+export function raceReadiness(context: RaceContext, longest: { rideMin: number; runMin: number; swimM?: number }): ReadinessGap[] {
   const spec = RACE_TYPES[context.race.type];
   const gaps: ReadinessGap[] = [];
   const shortfall = TUNABLES.race.readinessShortfall;
@@ -261,7 +271,16 @@ export function raceReadiness(context: RaceContext, longest: { rideMin: number; 
   });
 
   if (spec.discipline === 'tri') {
-    gaps.push({ ok: false, message: `Swimming isn't planned yet: ${spec.swimM} m open water is the one leg this app can't coach you through today.` });
+    const swimM = Math.round(longest.swimM ?? 0);
+    const swimOk = swimM >= spec.swimM * shortfall;
+    gaps.push({
+      ok: swimOk,
+      message: swimOk
+        ? `Longest swim ${swimM} m, on track for the ${spec.swimM} m swim leg. Get some open-water practice in before race day.`
+        : swimM > 0
+          ? `Longest swim so far is ${swimM} m; the swim leg is ${spec.swimM} m of open water. The two weekly swims build toward it.`
+          : `No swims recorded yet. Swim sessions are in the plan from ${TUNABLES.swim.startDate}, building toward the ${spec.swimM} m swim leg.`,
+    });
   }
 
   return gaps;

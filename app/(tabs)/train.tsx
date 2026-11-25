@@ -16,6 +16,7 @@ import type { PlannedSession, SessionDetail } from '@/domain/plan/types';
 import { SessionCard } from '@/features/plan/SessionCard';
 import { TabHeader } from '@/features/navigation/TabHeader';
 import { Body, Button, Card, RowLink, Screen, SectionLabel } from '@/ui/components';
+import { formatMonthDay } from '@/ui/format';
 import { colors, font, radius, space, TAP_MIN } from '@/ui/theme';
 
 export default function TrainTab() {
@@ -53,12 +54,20 @@ export default function TrainTab() {
     setMoving(false);
   };
 
-  const isThisWeek = weekStart === startOfWeek(today);
+  const thisWeek = startOfWeek(today);
+  const isThisWeek = weekStart === thisWeek;
+  const weekTitle = isThisWeek
+    ? 'This week'
+    : weekStart === addDays(thisWeek, 7)
+      ? 'Next week'
+      : weekStart === addDays(thisWeek, -7)
+        ? 'Last week'
+        : `Week of ${formatMonthDay(weekStart)}`;
 
   return (
     <Screen bottomInset>
       <TabHeader
-        title={isThisWeek ? 'This week' : weekStart > today ? 'Next week' : 'Last week'}
+        title={weekTitle}
         subtitle={isThisWeek ? 'Every change comes with its reason. Tap Move / skip on any day.' : "Preview. Built from this week's data; it refreshes as the week goes on."}
       />
       <View style={{ flexDirection: 'row', gap: space.sm, marginBottom: space.md }}>

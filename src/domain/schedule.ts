@@ -10,13 +10,15 @@ export const SESSION_TYPE_IDS = [
   'bike_quality',
   'bike_easy',
   'bike_long',
+  'swim_technique',
+  'swim_endurance',
   'tennis',
   'mobility',
   'rest',
 ] as const;
 export type SessionType = (typeof SESSION_TYPE_IDS)[number];
 
-export type SessionKind = 'strength' | 'run' | 'bike' | 'tennis' | 'mobility' | 'rest';
+export type SessionKind = 'strength' | 'run' | 'bike' | 'swim' | 'tennis' | 'mobility' | 'rest';
 
 export const SESSION_TYPES: Record<SessionType, { label: string; kind: SessionKind; heavyLower: boolean; endurance: boolean }> = {
   strength_lower: { label: 'Strength: lower body + core', kind: 'strength', heavyLower: true, endurance: false },
@@ -28,6 +30,8 @@ export const SESSION_TYPES: Record<SessionType, { label: string; kind: SessionKi
   bike_quality: { label: 'Bike: intervals / tempo', kind: 'bike', heavyLower: false, endurance: true },
   bike_easy: { label: 'Bike: easy spin', kind: 'bike', heavyLower: false, endurance: true },
   bike_long: { label: 'Bike: long ride', kind: 'bike', heavyLower: false, endurance: true },
+  swim_technique: { label: 'Swim: technique and drills', kind: 'swim', heavyLower: false, endurance: true },
+  swim_endurance: { label: 'Swim: endurance', kind: 'swim', heavyLower: false, endurance: true },
   tennis: { label: 'Tennis', kind: 'tennis', heavyLower: false, endurance: false },
   mobility: { label: 'Mobility (15 min) or rest', kind: 'mobility', heavyLower: false, endurance: false },
   rest: { label: 'Rest', kind: 'rest', heavyLower: false, endurance: false },

@@ -1,6 +1,6 @@
 # Headroom
 
-A local-first fitness and nutrition app: Garmin data via Health Connect (or Apple Health), a deterministic training-plan engine, a gym workout player, and Indian vegetarian nutrition tracking. Built for one person and sideloaded, not published to any store — but the whole thing is here if you want to build it for yourself or take pieces of it.
+A local-first fitness and nutrition app: Garmin data via Health Connect (or Apple Health, or straight from Garmin), a deterministic training-plan engine, a gym workout player, and Indian vegetarian nutrition tracking. Built for one person and sideloaded, not published to any store — but the whole thing is here if you want to build it for yourself or take pieces of it.
 
 The name is the idea: every morning it works out how much training you have room for, given your load ratio, your readiness and the daily time cap.
 Expo SDK 57 + React Native + TypeScript. **All data stays on the phone** — there is no server, no account and no analytics.
@@ -12,13 +12,13 @@ Expo SDK 57 + React Native + TypeScript. **All data stays on the phone** — the
 - **Today**: a greeting with your name, then stat cards you swipe through in pairs (readiness and sleep, then training load and VO2 max), steps against your goal, the morning check-in, today's planned session, **everything you actually did today** with its time, distance, heart rate and effort, calories and protein against target, a trends card (weight or steps over one, three or six months) and this week's sessions. Sessions from the last week that still carry an estimated effort get a rating prompt.
 - **Steps and VO2 max widget**: a home screen (and, where Android supports it, lock screen) widget with today's steps against the goal on one side and the latest VO2 max with its trend on the other. Native Kotlin, reads the app's database directly, refreshes every 30 minutes without waking the app.
 - **Train**: the week's plan with a reason on every change. **Tap any day to see its whole plan**: the exercise list with sets, reps, rest, the station to look for and the suggested weight from your last sessions, or, for a run or ride, the structure step by step. Move / skip / sick / travel and the week rebalances without cramming. Full-screen workout player for YMCA strength days (one exercise at a time, frames, cues, prefilled steppers, auto rest timer with vibration, swap, session timer against the 50-min cap, session RPE). Structured runs with VDOT paces, structured rides with heart-rate zones and cadence, and planned-vs-actual after the watch syncs. Manual log for tennis and anything else.
-- **Race goal mode**: add a race (5K through marathon, sprint / Olympic tri, Ironman 70.3) and the plan builds toward it — phases (base → build → peak → taper → race week), a long ride and long run that ramp and then taper, a predicted finish, and an honest readiness check. A triathlon switches the week to two strength days, a quality ride, a quality run and a Saturday long ride with a brick run, keeping Sunday tennis.
+- **Race goal mode**: add a race (5K through marathon, sprint / Olympic tri, Ironman 70.3) and the plan builds toward it — phases (base → build → peak → taper → race week), a long ride and long run that ramp and then taper, a predicted finish, and an honest readiness check. A triathlon switches the week to two strength days, a quality ride, a quality run and a Saturday long ride with a brick run, keeping Sunday tennis. From the date swimming starts, two of those days become swims (see Swimming).
 - **Run history**: every run with pace and heart-rate trends, and pace compared at a similar heart rate.
 - **Food**: calorie and protein rings, quick add from ~180 Indian vegetarian foods with household servings, favourites, recents, copy yesterday, custom recipes, USDA search, barcode scanning. Alongside breakfast, lunch, snack and dinner there is an **Extras** list for anything eaten outside the planned meals, fruit through the day or a yoghurt, with no limit on how many things go in it. Rule-based weekly meal plan (protein anchor per meal, no repeats within 3 days, swap any meal) and grocery list. Optional "cook once, eat twice" plans the same dinner two evenings running.
 - **Progress**: 7-day-average weight trend, waist, VO2 max over 90 days, progress photos (on-device only), and the Sunday weekly review (weight, strength PRs, pace at similar heart rate, adherence, next week's plan with its changes explained).
 - **Look and navigation**: a dark theme with a dusky gradient glowing behind the top of every screen and translucent cards over it. A floating tab bar (Today, Train, Food, Progress) with a **+** button for quick logging: check-in, food, weight, activity. Settings is behind the gear at the top of each tab.
 - **Notifications**: morning digest (one line: sleep, readiness, load, session, targets) and an evening preview of tomorrow's session and meals. Times in Settings.
-- **Data**: Garmin via Health Connect (read only). A demo-data mode generates realistic data for emulators. JSON backup and restore.
+- **Data**: Garmin via Health Connect (read only), or directly from Garmin Connect with a Personal API key, which also brings VO2 max and HRV. A demo-data mode generates realistic data for emulators. JSON backup and restore.
 
 ## One-time setup (Mac)
 
@@ -184,11 +184,62 @@ Garmin's own scores (Body Battery, sleep score, training readiness) aren't share
 
 On an emulator or before the watch is connected, switch **Settings → Garmin & Health Connect → Demo data** to see every screen with generated data.
 
+## Garmin (direct): the Personal API
+
+A second way to get Garmin data, alongside the phone's health store. The app reads your Garmin Connect account straight from Garmin over the internet, with a key you create yourself. It exists because Garmin leaves VO2 max and HRV out of what it writes to Health Connect.
+
+### Creating the key
+
+1. Sign in to Garmin Connect on the web and open https://connect.garmin.com/app/settings/personalApiToken.
+2. **Create Key**, accept the terms, choose how long it lasts (one year is the longest), **Create**.
+3. Copy the key straight away. Garmin shows it once; if you lose it, delete it and make another.
+4. In this app: **Settings → Garmin & Health Connect → Garmin (direct)**, paste the key, enter the expiry date Garmin showed, **Save key**.
+
+Saving checks the key with Garmin and reads the last 60 days. Tap **Re-read everything** once afterwards to pull a full year, which is what fills in the VO2 max and HRV history.
+
+### Where the key lives
+
+Only in the phone's secure storage (Android Keystore-encrypted preferences, iOS Keychain), through `expo-secure-store`. It is never written to the database, so it is not in a backup file, and it is never logged. A backup restored on a new phone therefore needs the key pasted in again. Garmin does not take the key on each request: the app swaps it for a bearer token that lasts about a day, keeps that in secure storage too, and gets a new one when it is nearly out or Garmin refuses it.
+
+Garmin does not tell the app when a key expires, so the expiry date is the one you type in. Today shows a warning from 14 days before (`garmin.keyWarningDays`), and a plain message when Garmin stops accepting the key.
+
+### What it reads, and what it can't
+
+| Data | From | Notes |
+| --- | --- | --- |
+| Activities | activity list | Type, start, finish, distance, heart rate, active calories. Swims, rides, runs, strength and racket sports map to the app's types |
+| Sleep | nightly summaries | Time asleep and the **total** minutes of deep, light, REM and awake |
+| Resting heart rate, steps, active calories | daily summaries | |
+| HRV | nightly HRV summaries | Garmin's overnight average. Health Connect never has this |
+| VO2 max | daily VO2 max | Appears on days Garmin made a new estimate. Health Connect never has this |
+| Weight | weigh-ins | Including ones typed into Garmin Connect |
+
+Things to know:
+
+- **Sleep stages come as totals, not a timeline.** The sleep score only uses the totals, so it is unaffected, but the stored stage blocks are laid end to end rather than at the times they happened.
+- **Read-only.** The Personal API cannot send workouts or routes to the watch.
+- **It needs the internet.** The phone's health store works offline; this does not. A sync with no connection fails with a message saying so and tries again next time.
+- **One source at a time.** Pick Garmin (direct) or the phone's health store, not a mix. Switching back and forth is safe: an activity that arrives from both is recognised as the same session (same type, start within 5 minutes, similar length) and counted once, and the same goes for weigh-ins.
+- **No laps or second-by-second data.** Only activity summaries are read. FIT files are available from the API and could be parsed later.
+- **Garmin publishes no rate limits**, so the app asks for four weeks at a time (`garmin.windowDays`), one request after another, and backs off when told to slow down. A normal sync is about seven requests; a full year is about seventy.
+
+### For development
+
+The mappers in `src/sources/garminApiMapping.ts` are tested against real responses saved in `src/sources/__fixtures__/garmin/`. To capture your own, put the key in `~/.config/garmin/connect-personal-api-key` (the file Garmin's own CLI reads) and run:
+
+```bash
+node scripts/capture-garmin-fixtures.js
+```
+
+It writes each response twice: untouched into `.garmin-capture/` (git-ignored), and with names, account ids and locations removed into the fixtures folder. The fixtures still hold real heart rate, sleep and weight numbers, so read them before committing.
+
 ## Step counts, and why they must be aggregated
 
 A phone's health store can hold the same stretch of time more than once, typically when the watch re-sends a period it already sent. Adding up every raw record then counts those minutes twice: on one Android phone in September 2026 that turned a real 5,006-step day into 5,726.
 
-So daily steps and active calories are never summed by hand. Android asks Health Connect for its own daily totals (`aggregateGroupByPeriod`), and iOS asks Apple Health for its daily statistics. Both de-duplicate overlaps and apply the platform's own source priority, so the number matches what the platform's own screens show. Session distance and calories come from raw records, since they must line up with a workout's start and end, but they are added with `sumWithoutOverlap`, which skips any record covering time already counted. An inflated run distance would otherwise quietly corrupt the paces the plan is built from.
+So daily steps and active calories are never summed by hand. Android asks Health Connect for its own daily totals (`aggregateGroupByPeriod`), and iOS asks Apple Health for its daily statistics. Both de-duplicate overlaps.
+
+On Android the totals are limited to Garmin Connect's own records (`TUNABLES.sync.watchApp`), and so are distance, calories and workouts. Across every app, Health Connect fills gaps in the watch's record with steps the phone counted itself (Samsung Health, for one), which read 9,673 on a day Garmin Connect showed 9,087. Other apps' steps are never used, even on a day the watch wrote nothing. Heart rate, sleep, HRV, weight and VO2 max are still read from any app, since a phone cannot measure them. Session distance and calories come from raw records, since they must line up with a workout's start and end, but they are added with `sumWithoutOverlap`, which skips any record covering time already counted. An inflated run distance would otherwise quietly corrupt the paces the plan is built from.
 
 One trap worth remembering: Health Connect starts its day-long buckets at the beginning of the range you ask for, not at midnight. Ask from the time of the last sync and the days slice at, say, 18:40, so today's steps get filed under yesterday. The range is anchored to local midnight for that reason.
 
@@ -252,13 +303,14 @@ src/domain/        Pure TypeScript logic, no React. Unit tested (*.test.ts next 
                    nutrition/ targets, meal plan, recipes
 src/data/          exercises.ts (library), workoutTemplates.ts, foods.ts (seed DB), youtube.json, exerciseImages.ts (generated)
 src/db/            Drizzle schema, generated migrations, repos (the only code that touches the database)
-src/sources/       Where activity data comes from: healthConnect.ts, mock.ts (same interface)
+src/sources/       Where activity data comes from: healthConnect.ts, appleHealth.ts, garminApi.ts, mock.ts (same interface)
 src/sync/          syncService (read → store → dedupe → recompute), background task, notifications, digest text, backup
 src/services/      USDA and Open Food Facts lookups
 src/features/      Screen pieces grouped by feature (workout player parts, forms, plan cards)
 src/ui/            Theme and gradient backdrop, shared components, the card kit (cards.tsx), charts and their tested geometry, icons, formatting
 assets/exercises/  Two frames per exercise from free-exercise-db (public domain)
 src/domain/cycling/ Bike zones and structured rides
+src/domain/swimming/ Swim progression and structured pool swims
 src/domain/plan/race.ts  Race types, phases, long-session progression, race-week template
 plugins/           Expo config plugins: release signing, Health Connect permissions, the steps and VO2 max widget (Kotlin)
 scripts/           build-apk.sh, make-icons.js (every app icon from one description), gen-exercise-images.js
@@ -300,7 +352,7 @@ Adding another named meal means adding it to `LOG_SLOTS` and `LOG_SLOT_LABELS` i
 - **TRIMP** (Banister) shown per run with heart rate.
 - **Sleep score**: duration vs target 40, efficiency 20, deep+REM 20, bed/wake consistency 20; missing parts re-weighted.
 - **Readiness**: sleep 35, resting HR vs 28-day baseline 25, HRV vs 7-day baseline 20, check-in 20. Pain is handled by the plan, not the score.
-- **Plan rules** (in order): pain → deload (every 4th week or 3 low-readiness days) → ACWR trim → run volume ≤ +10 %/week and none when adding intensity → bike volume ≤ +10 %/week → lighter Monday after long/hard tennis → no heavy legs before a run or long ride → time cap. Day-of: low readiness swaps in the easy version; pain removes exercises that load the area (knee/hip pain stops rides too; shin or calf pain leaves them alone, because cycling is good cross-training).
+- **Plan rules** (in order): pain → deload (every 4th week or 3 low-readiness days) → ACWR trim → run volume ≤ +10 %/week and none when adding intensity → bike volume ≤ +10 %/week → lighter Monday after long/hard tennis → no heavy legs before a run or long ride → time cap. Day-of: low readiness swaps in the easy version; pain removes exercises that load the area (knee/hip pain stops rides too; shin or calf pain leaves them alone, because cycling is good cross-training; shoulder, neck or elbow pain stops swims).
 - **Time caps**: weekdays stay at 50 minutes. The weekend long session gets its own allowance — the long session plus 30 minutes, up to a 4-hour ceiling — so a 3-hour ride is possible without the cap fighting it.
 - **Race phases**: counted back from race day, e.g. a 70.3 is 2 taper weeks, 4 peak, 6 build, base before that. The long ride ramps from 60 min toward 210 over the last ~10 weeks, then drops to 60 % in the taper and 40 % in race week. The 10 %-a-week governor still applies, so the ramp is the ceiling, not the plan.
 - **Bike zones**: from an estimated cycling max heart rate (running max − 10). Z1 < 68 %, Z2 68–75 %, Z3 76–83 %, Z4 84–92 %, Z5 93 %+. Each zone also carries an RPE for gym bikes or a flat strap.
@@ -325,7 +377,9 @@ On the lock screen the app isn't running, so freshness there comes from the back
 
 **Garmin does not share VO2 max with Health Connect.** Checked on Android in September 2026 with the Data Inspector: Health Connect held no VO2 max record at any date, while heart rate, sleep, steps and resting heart rate all reached back months. Heart-rate variability is missing for the same reason, so readiness drops that component and re-weights the rest, which it is built to do.
 
-So on Android you enter VO2 max yourself: **Settings → VO2 max**, copying the number from Garmin Connect under Performance Stats → VO2 Max. Every few weeks is plenty, since the watch only updates it every few runs. You can date a reading in the past to fill in the trend. A typed reading lives in the same place as a synced one, so the tile, the trend and the widget treat them alike; if a phone's health store ever does start providing VO2 max, a synced reading for that date wins. The tile on Today and the card on Progress both show the latest reading and the change across the window; tapping either opens the full trend, every reading, and an honest comparison against the VDOT the app works out from your actual running.
+The direct Garmin source does provide both: switch to **Garmin (direct)** (see above) and VO2 max and HRV sync on their own.
+
+Otherwise, on Android you enter VO2 max yourself: **Settings → VO2 max**, copying the number from Garmin Connect under Performance Stats → VO2 Max. Every few weeks is plenty, since the watch only updates it every few runs. You can date a reading in the past to fill in the trend. A typed reading lives in the same place as a synced one, so the tile, the trend and the widget treat them alike; if a phone's health store ever does start providing VO2 max, a synced reading for that date wins. The tile on Today and the card on Progress both show the latest reading and the change across the window; tapping either opens the full trend, every reading, and an honest comparison against the VDOT the app works out from your actual running.
 
 The two numbers rarely match, and neither is wrong. The watch estimates VO2 max from heart rate and pace; VDOT comes from how fast you actually race. **Training paces always come from VDOT**, never from the watch's VO2 max.
 
@@ -335,7 +389,24 @@ A change under 0.5 is treated as noise rather than fitness. Both that threshold 
 
 ## Swimming
 
-Swim activities recorded on the watch already sync, count toward training load and show in the activity list; structured swim sessions and a swim leg in the 70.3 plan are the next thing to build. The race readiness check says so plainly rather than pretending otherwise.
+Swim sessions join the triathlon week from the Monday set in `swim.startDate` (7 December 2026). The plan holds one session a day, so each swim takes a day:
+
+| Day | Before | From the start date |
+| --- | --- | --- |
+| Thursday | Strength: upper body | **Endurance swim**: one set of equal repeats |
+| Friday | Mobility or rest | **Technique swim**: drills, then smooth swimming |
+
+Monday's leg strength stays. Swimming works the upper body, which is why it replaces that strength day. There is no full rest day in this week; Friday's technique swim is the easy day.
+
+- **Distance** starts at 800 m a session (`swim.startDistanceM`), which suits someone who cannot yet swim 200 m without stopping, and grows about 10 % a week. The technique swim levels off at 1,200 m and the endurance swim at 2,200 m, past the 70.3's 1,900 m.
+- **Repeats get longer as the swim does**: 50s with a rest after each at first, then 100s, 200s and 400s.
+- **Time.** The plan works in minutes, so a swim's distance is worked out from its minutes at `swim.minPer100m` (3 minutes per 100 m including rests, a beginner's pace). At that pace the 50-minute daily cap holds a session to about 1,700 m. Lower the number as you get faster and the sessions grow past it.
+- **The rules apply to swims too.** A sore shoulder, neck or elbow turns a swim into mobility. A deload week shortens both swims and makes them technique swims. A low-readiness morning turns the endurance swim into a technique swim of the same length.
+- **Pool.** Sets are written in 50s and 100s for a 50 m pool (`swim.poolLengthM`). Record the swim on the watch as a pool swim; it syncs, counts toward load and ticks the session off.
+
+Swims only appear on their own when a triathlon is your next A race and **Settings → Races & race plan → Let the race reshape my week** is on. Otherwise, pick the two swim sessions for any day in **Settings → Weekly schedule**.
+
+Not built: open-water sessions, a swim pace for the race prediction, and swim-specific strength work.
 
 ## Strava
 

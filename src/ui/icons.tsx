@@ -161,16 +161,6 @@ export const HeartIcon = (props: IconProps) => (
   </Icon>
 );
 
-/** One icon per kind of session, for the week list and anywhere else a session is shown small. */
-export const SESSION_KIND_ICONS = {
-  strength: TrainIcon,
-  run: RunIcon,
-  bike: BikeIcon,
-  tennis: TennisIcon,
-  mobility: MobilityIcon,
-  rest: RestIcon,
-} as const;
-
 export const WalkIcon = (props: IconProps) => (
   <Icon {...props}>
     <Circle cx={13} cy={4.5} r={1.8} />
@@ -185,6 +175,17 @@ export const SwimIcon = (props: IconProps) => (
     <Path d="M2 17.5c1.8 0 1.8-1.4 3.7-1.4s1.8 1.4 3.6 1.4 1.8-1.4 3.7-1.4 1.8 1.4 3.6 1.4 1.9-1.4 3.7-1.4M2 21c1.8 0 1.8-1.4 3.7-1.4S7.5 21 9.3 21s1.8-1.4 3.7-1.4S14.8 21 16.6 21s1.9-1.4 3.7-1.4" />
   </Icon>
 );
+
+/** One icon per kind of session, for the week list and anywhere else a session is shown small. */
+export const SESSION_KIND_ICONS = {
+  strength: TrainIcon,
+  run: RunIcon,
+  bike: BikeIcon,
+  swim: SwimIcon,
+  tennis: TennisIcon,
+  mobility: MobilityIcon,
+  rest: RestIcon,
+} as const;
 
 /** One icon per kind of recorded activity, for the "done today" list. */
 export const ACTIVITY_ICONS = {

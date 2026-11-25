@@ -10,16 +10,19 @@ import { buildEasySpin } from '../cycling/workouts';
 import { WEEKDAY_LABELS, addDays, weekdayOf } from '../dates';
 import { buildEasyRun } from '../running/workouts';
 import { SESSION_TYPES } from '../schedule';
+import { buildSwim } from '../swimming/workouts';
 import { weekendCapMin } from './race';
-import { detailFor, isBike, isEndurance, isFreeDay, isHeavyLower, isLong, isRun, isStrength, sessionOn } from './weekBuilder';
+import { detailFor, isBike, isEndurance, isFreeDay, isHeavyLower, isLong, isRun, isStrength, isSwim, sessionOn } from './weekBuilder';
 import type { PlanChange, PlannedSession, RuleResult, WeekContext } from './types';
 
 type Rule = (sessions: PlannedSession[], ctx: WeekContext) => RuleResult;
 
 /** Pain here stops you running. */
-const RUN_STOPPING_AREAS: BodyArea[] = ['knee', 'ankle', 'hip', 'foot', 'shin', 'calf', 'hamstring', 'groin'];
+export const RUN_STOPPING_AREAS: BodyArea[] = ['knee', 'ankle', 'hip', 'foot', 'shin', 'calf', 'hamstring', 'groin'];
 /** Pain here also stops you riding; the rest are usually fine on a bike (that's why it's good cross-training). */
-const BIKE_STOPPING_AREAS: BodyArea[] = ['knee', 'hip', 'groin', 'lower_back'];
+export const BIKE_STOPPING_AREAS: BodyArea[] = ['knee', 'hip', 'groin', 'lower_back'];
+/** Pain here stops you swimming: freestyle is all shoulder, and a sore neck hates turning to breathe. */
+export const SWIM_STOPPING_AREAS: BodyArea[] = ['shoulder', 'neck', 'elbow'];
 
 const areaLabel = (area: BodyArea) => BODY_AREAS.find((a) => a.id === area)?.label.toLowerCase() ?? area;
 
@@ -38,10 +41,17 @@ export const painRule: Rule = (sessions, ctx) => {
 
   const runStopper = ctx.painAreas.find((a) => RUN_STOPPING_AREAS.includes(a));
   const bikeStopper = ctx.painAreas.find((a) => BIKE_STOPPING_AREAS.includes(a));
+  const swimStopper = ctx.painAreas.find((a) => SWIM_STOPPING_AREAS.includes(a));
 
   const out = sessions.map((s) => {
     const upcoming = s.status === 'planned' && s.date >= ctx.today;
     if (!upcoming) return s;
+
+    if (swimStopper && isSwim(s)) {
+      const reason = `Swim replaced with mobility because of ${areaLabel(swimStopper)} pain.`;
+      changes.push({ ruleId: 'pain', date: s.date, reason });
+      return { ...s, sessionType: 'mobility' as const, targetMin: 15, detail: detailFor('mobility', 15, ctx), reason };
+    }
 
     if (runStopper && isRun(s)) {
       const reason = `Run replaced with mobility because of ${areaLabel(runStopper)} pain. Never run through pain.`;
@@ -98,6 +108,10 @@ export const deloadRule: Rule = (sessions, ctx) => {
       const targetMin = Math.round(s.targetMin * fraction);
       return setReason({ ...s, targetMin, detail: buildEasySpin(targetMin, true) }, `Deload week: easy spin, ${targetMin} min.`);
     }
+    if (isSwim(s)) {
+      const targetMin = Math.round(s.targetMin * fraction);
+      return setReason({ ...s, targetMin, detail: buildSwim('technique', targetMin) }, `Deload week: a short technique swim, ${targetMin} min.`);
+    }
     return s;
   });
   return { sessions: out, changes };
@@ -116,7 +130,7 @@ export const acwrRule: Rule = (sessions, ctx) => {
     trimmed += 1;
     if (isEndurance(s)) {
       const targetMin = Math.max(20, Math.round((s.targetMin * (1 - p.acwrTrimFraction)) / 5) * 5);
-      const what = isRun(s) ? 'run' : 'ride';
+      const what = isRun(s) ? 'run' : isSwim(s) ? 'swim' : 'ride';
       const reason = `Cut ${WEEKDAY_LABELS[weekdayOf(s.date)]} ${what} to ${targetMin} min because load is ${pct}% above your 4-week average (ACWR ${ctx.acwr!.toFixed(2)}).`;
       changes.push({ ruleId: 'acwr', date: s.date, reason });
       return setReason({ ...s, targetMin, detail: detailFor(s.sessionType, targetMin, ctx) }, reason);

@@ -7,6 +7,7 @@ import type { Paces } from '../running/vdot';
 import type { RunPlan } from '../running/workouts';
 import type { SessionType, WeekSchedule } from '../schedule';
 import type { Variant } from '../strength/workoutBuilder';
+import type { SwimPlan } from '../swimming/workouts';
 import type { RaceContext } from './race';
 
 export type SessionStatus = 'planned' | 'done' | 'skipped' | 'sick' | 'travel' | 'dropped';
@@ -14,6 +15,7 @@ export type SessionStatus = 'planned' | 'done' | 'skipped' | 'sick' | 'travel' |
 export type SessionDetail =
   | RunPlan
   | BikePlan
+  | SwimPlan
   | { kind: 'strength'; templateId: string }
   | { kind: 'mobility'; templateId: string }
   | { kind: 'tennis' }

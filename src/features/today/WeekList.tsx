@@ -25,13 +25,13 @@ const STATUS: Record<PlannedSession['status'], { label: string; tone: Tone }> = 
 
 /** "Strength: lower body + core" -> "Lower body + core"; runs and rides use their plan's title. */
 export function shortSessionTitle(session: PlannedSession): string {
-  if (session.detail.kind === 'run' || session.detail.kind === 'bike') return session.detail.title;
+  if (session.detail.kind === 'run' || session.detail.kind === 'bike' || session.detail.kind === 'swim') return session.detail.title;
   const label = SESSION_TYPES[session.sessionType].label;
   const rest = label.includes(':') ? label.slice(label.indexOf(':') + 1).trim() : label;
   return rest.charAt(0).toUpperCase() + rest.slice(1);
 }
 
-const KIND_NAMES = { strength: 'Strength', run: 'Run', bike: 'Ride', tennis: 'Tennis', mobility: 'Mobility', rest: 'Rest' } as const;
+const KIND_NAMES = { strength: 'Strength', run: 'Run', bike: 'Ride', swim: 'Swim', tennis: 'Tennis', mobility: 'Mobility', rest: 'Rest' } as const;
 
 export function WeekList({ sessions, today }: { sessions: PlannedSession[]; today: DateKey }) {
   const [upcomingOnly, setUpcomingOnly] = useState(true);

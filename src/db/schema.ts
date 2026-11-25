@@ -48,8 +48,8 @@ export const settings = sqliteTable('settings', {
   effortScale: text('effort_scale', { enum: ['rpe', 'rir'] }).notNull().default('rpe'),
   /** Evening preview of tomorrow, "HH:MM"; empty string = off. */
   eveningPreviewTime: text('evening_preview_time').notNull().default('20:00'),
-  /** Where activity/sleep data comes from: real Health Connect or generated demo data. */
-  dataSource: text('data_source', { enum: ['health_connect', 'mock'] }).notNull().default('health_connect'),
+  /** Where activity/sleep data comes from: the phone's health store, Garmin Connect directly, or generated demo data. */
+  dataSource: text('data_source', { enum: ['health_connect', 'garmin_api', 'mock'] }).notNull().default('health_connect'),
   healthConnectConnected: integer('health_connect_connected', { mode: 'boolean' }).notNull().default(false),
   /** Daily step goal (Today tile and the home/lock screen widget). */
   stepGoal: integer('step_goal').notNull().default(8000),
@@ -87,7 +87,7 @@ export const bodyMeasurements = sqliteTable(
     measuredAt: integer('measured_at', { mode: 'timestamp_ms' }).notNull(),
     weightKg: real('weight_kg'),
     waistCm: real('waist_cm'),
-    source: text('source', { enum: ['manual', 'health_connect', 'apple_health'] }).notNull(),
+    source: text('source', { enum: ['manual', 'health_connect', 'apple_health', 'garmin_api'] }).notNull(),
     /** Health Connect record id, so re-syncing never duplicates a weigh-in. */
     externalId: text('external_id').unique(),
   },
@@ -155,7 +155,7 @@ export const activities = sqliteTable(
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
     date: text('date').notNull(),
-    source: text('source', { enum: ['health_connect', 'apple_health', 'manual', 'workout', 'mock'] }).notNull(),
+    source: text('source', { enum: ['health_connect', 'apple_health', 'garmin_api', 'manual', 'workout', 'mock'] }).notNull(),
     /** Health Connect record id (or workout log id), so re-syncing upserts instead of duplicating. */
     externalId: text('external_id').unique(),
     type: text('type', { enum: ACTIVITY_TYPES }).notNull(),
@@ -193,7 +193,7 @@ export const sleepSessions = sqliteTable(
     /** The morning you woke up, local date. */
     date: text('date').notNull(),
     externalId: text('external_id').unique(),
-    source: text('source', { enum: ['health_connect', 'apple_health', 'manual', 'mock'] }).notNull(),
+    source: text('source', { enum: ['health_connect', 'apple_health', 'garmin_api', 'manual', 'mock'] }).notNull(),
     startedAt: integer('started_at', { mode: 'timestamp_ms' }).notNull(),
     endedAt: integer('ended_at', { mode: 'timestamp_ms' }).notNull(),
     /** Stage segments as Health Connect gives them (stage codes in domain/sleepScore.ts). */

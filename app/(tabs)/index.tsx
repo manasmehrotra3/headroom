@@ -4,11 +4,12 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, Text } from 'react-native';
 
+import { TUNABLES } from '@/config/tunables';
 import { db } from '@/db/client';
 import { dayTargets, totalsOn } from '@/db/repos/nutritionRepo';
 import { sessionOnDate } from '@/db/repos/planRepo';
 import { currentRaceContext } from '@/db/repos/raceRepo';
-import { activities, bodyMeasurements, checkins, dailyMetrics, foodLogs, nutritionTargets, plannedSessions, races, settings } from '@/db/schema';
+import { activities, bodyMeasurements, checkins, dailyMetrics, foodLogs, nutritionTargets, plannedSessions, races, settings, syncState } from '@/db/schema';
 import { useDbValue } from '@/db/useDbValue';
 import { addDays, startOfWeek, todayKey } from '@/domain/dates';
 import { ACWR_LABELS, type AcwrLabel } from '@/domain/load';
@@ -25,8 +26,10 @@ import { RpePrompt } from '@/features/recovery/RpePrompt';
 import { TrendsCard } from '@/features/today/TrendsCard';
 import { WeekList } from '@/features/today/WeekList';
 import { beginWorkout } from '@/features/workout/startWorkout';
+import { keyExpiryNotice } from '@/sources/garminApiMapping';
 import { PHONE_HEALTH } from '@/sources/phoneHealth';
 import { ensureNotificationPermission } from '@/sync/notifications';
+import { GARMIN_KEY_EXPIRES_KEY, LAST_ERROR_KEY } from '@/sync/syncService';
 import { ListGroup, ListRow, PagedStatCards, SectionHeader, StatPair, type StatCardProps, type Tone } from '@/ui/cards';
 import { Body, Button, Card, Screen } from '@/ui/components';
 import { HeartIcon } from '@/ui/icons';
@@ -61,6 +64,7 @@ export default function TodayTab() {
   const { data: weightRows } = useLiveQuery(db.select().from(bodyMeasurements).orderBy(asc(bodyMeasurements.measuredAt)));
   const { data: settingsRows } = useLiveQuery(db.select().from(settings).where(eq(settings.id, 1)));
   const { data: activityRows } = useLiveQuery(db.select().from(activities).where(eq(activities.date, today)));
+  const { data: syncRows } = useLiveQuery(db.select().from(syncState));
   const { data: historyRows } = useLiveQuery(
     db
       .select({ date: dailyMetrics.date, vo2Max: dailyMetrics.vo2Max, steps: dailyMetrics.steps })
@@ -102,7 +106,14 @@ export default function TodayTab() {
 
   const targets = useDbValue(() => dayTargets(today), [today, targetsAt, sessionsAt]);
   const eaten = useDbValue(() => totalsOn(today), [today, logRows]);
-  const noSource = settingsRow && !settingsRow.healthConnectConnected && settingsRow.dataSource !== 'mock';
+  const noSource = settingsRow && !settingsRow.healthConnectConnected && settingsRow.dataSource === 'health_connect';
+
+  // Garmin (direct) syncs over the internet with a key that runs out, so say when that stops working.
+  const syncValue = (key: string) => syncRows.find((r) => r.key === key)?.value || null;
+  const garminProblem =
+    settingsRow?.dataSource === 'garmin_api'
+      ? (syncValue(LAST_ERROR_KEY) ?? keyExpiryNotice(syncValue(GARMIN_KEY_EXPIRES_KEY), today, TUNABLES.garmin.keyWarningDays)?.message ?? null)
+      : null;
 
   const pages: [StatCardProps, StatCardProps][] = [
     [
@@ -146,6 +157,12 @@ export default function TodayTab() {
         <Card style={{ borderColor: colors.info }}>
           <Body>Connect Garmin data to get sleep, readiness and training load.</Body>
           <Button variant="secondary" label={`Set up ${PHONE_HEALTH.name} (or demo data)`} onPress={() => router.push('/edit/health')} />
+        </Card>
+      ) : null}
+      {garminProblem ? (
+        <Card style={{ borderColor: colors.warning }}>
+          <Body>{garminProblem}</Body>
+          <Button variant="secondary" label="Open Garmin settings" onPress={() => router.push('/edit/health')} />
         </Card>
       ) : null}
       {notifGranted === false ? (

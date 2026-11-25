@@ -19,7 +19,7 @@ export function sessionLine(session: PlannedSession | undefined): string {
   if (session.status === 'sick' || session.status === 'travel' || session.status === 'skipped') return `${SESSION_TYPES[session.sessionType].label} (${session.status})`;
   if (session.sessionType === 'rest') return 'Rest day';
   const variant = session.variant === 'easy' ? ' (easy version)' : session.variant === 'deload' ? ' (deload)' : '';
-  const title = session.detail.kind === 'run' || session.detail.kind === 'bike' ? session.detail.title : SESSION_TYPES[session.sessionType].label;
+  const title = session.detail.kind === 'run' || session.detail.kind === 'bike' || session.detail.kind === 'swim' ? session.detail.title : SESSION_TYPES[session.sessionType].label;
   return `${title}${variant}, ${session.targetMin} min`;
 }
 

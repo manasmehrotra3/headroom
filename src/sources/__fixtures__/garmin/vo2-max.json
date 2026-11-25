@@ -1,0 +1,42 @@
+[
+  {
+    "generic": {
+      "calendarDate": "2026-10-25",
+      "vo2MaxPreciseValue": 47.1,
+      "vo2MaxValue": 47,
+      "sport": "WALKING",
+      "subSport": "GENERIC"
+    },
+    "cycling": null
+  },
+  {
+    "generic": {
+      "calendarDate": "2026-11-08",
+      "vo2MaxPreciseValue": 47.1,
+      "vo2MaxValue": 47,
+      "sport": "RUNNING",
+      "subSport": "GENERIC"
+    },
+    "cycling": null
+  },
+  {
+    "generic": {
+      "calendarDate": "2026-11-13",
+      "vo2MaxPreciseValue": 47.3,
+      "vo2MaxValue": 47,
+      "sport": "RUNNING",
+      "subSport": "GENERIC"
+    },
+    "cycling": null
+  },
+  {
+    "generic": {
+      "calendarDate": "2026-11-14",
+      "vo2MaxPreciseValue": 46.9,
+      "vo2MaxValue": 47,
+      "sport": "RUNNING",
+      "subSport": "GENERIC"
+    },
+    "cycling": null
+  }
+]

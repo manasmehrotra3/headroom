@@ -9,7 +9,7 @@ export interface Dedupable {
 }
 
 /** Order of preference when two records describe the same session: the watch wins. */
-const SOURCE_PRIORITY: Record<string, number> = { health_connect: 0, apple_health: 0, mock: 0, workout: 1, manual: 2 };
+const SOURCE_PRIORITY: Record<string, number> = { health_connect: 0, apple_health: 0, garmin_api: 0, mock: 0, workout: 1, manual: 2 };
 
 /**
  * Finds records that describe the same session: same activity family, starts within

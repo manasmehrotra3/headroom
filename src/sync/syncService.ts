@@ -1,5 +1,5 @@
 /**
- * Pulls data from the active source (the phone's health store, or demo data) into the database, then
+ * Pulls data from the active source (the phone's health store, Garmin directly, or demo data) into the database, then
  * recomputes the daily numbers: sleep score, readiness, training load.
  * Runs when the app opens and from the background task before the morning digest.
  */
@@ -19,6 +19,7 @@ import { dailyLoads, estimateMaxHr, estimateRpeFromHr, loadSummary, trimp } from
 import { mean, median, readiness } from '@/domain/readiness';
 import { pickMainSleep, sleepScore, sleepTimingBaseline } from '@/domain/sleepScore';
 import { appleHealthSource } from '@/sources/appleHealth';
+import { garminApiSource } from '@/sources/garminApi';
 import { healthConnectSource } from '@/sources/healthConnect';
 
 import { publishWidget } from './widget';
@@ -26,6 +27,9 @@ import { mockSource } from '@/sources/mock';
 import type { ActivitySource, SourceData } from '@/sources/types';
 
 const LAST_SYNC_KEY = 'lastSyncMs';
+export const LAST_ERROR_KEY = 'lastSyncError';
+/** The day the Garmin key stops working, "YYYY-MM-DD". Not a secret, unlike the key itself. */
+export const GARMIN_KEY_EXPIRES_KEY = 'garminKeyExpires';
 
 export function getSyncValue(key: string): string | null {
   return db.select().from(syncState).where(eq(syncState.key, key)).get()?.value ?? null;
@@ -40,9 +44,16 @@ export function lastSyncAt(): Date | null {
   return value ? new Date(Number(value)) : null;
 }
 
+/** Why the last sync failed, or null if it worked. Shown on Today, since most syncs run unattended. */
+export function lastSyncError(): string | null {
+  return getSyncValue(LAST_ERROR_KEY) || null;
+}
+
 export function activeSource(): ActivitySource | null {
   const settings = loadSettings();
   if (settings.dataSource === 'mock') return mockSource;
+  // Whether a key is saved is only known by asking secure storage, so a missing key shows up as a failed sync.
+  if (settings.dataSource === 'garmin_api') return garminApiSource;
   // "health_connect" means the phone's own store: Health Connect on Android, Apple Health on iOS.
   if (!settings.healthConnectConnected) return null;
   return Platform.OS === 'ios' ? appleHealthSource : healthConnectSource;
@@ -71,9 +82,12 @@ export async function syncNow(source: ActivitySource | null = activeSource(), fr
   try {
     data = await source.read(fromMs, now);
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : String(error), activities: 0, sleep: 0 };
+    const message = error instanceof Error ? error.message : String(error);
+    setSyncValue(LAST_ERROR_KEY, message);
+    return { ok: false, message, activities: 0, sleep: 0 };
   }
 
+  setSyncValue(LAST_ERROR_KEY, '');
   storeSourceData(source, data);
   const fromDate = toDateKey(new Date(fromMs));
   const toDate = todayKey();
@@ -140,10 +154,19 @@ function storeSourceData(source: ActivitySource, data: SourceData): void {
     upsertDailyMetrics(d.date, { restingHr: d.restingHr, hrvRmssd: d.hrvRmssd, steps: d.steps, activeKcal: d.activeKcal, ...(d.vo2Max === null ? {} : { vo2Max: d.vo2Max }) });
   }
 
+  // Weigh-ins remember where they came from; demo weigh-ins file as Health Connect as before.
+  const weightSource = source.id === 'apple_health' || source.id === 'garmin_api' ? source.id : ('health_connect' as const);
   for (const w of data.weights) {
     const measuredAt = new Date(w.ms);
-    // Weigh-ins remember which phone store they came from; demo weigh-ins file as Health Connect as before.
-    const row = { date: toDateKey(measuredAt), measuredAt, weightKg: w.kg, source: source.id === 'apple_health' ? ('apple_health' as const) : ('health_connect' as const), externalId: w.externalId };
+    // After a change of source the same weigh-in arrives again under a different id. Keep the first copy.
+    const twin = db
+      .select({ externalId: bodyMeasurements.externalId })
+      .from(bodyMeasurements)
+      .where(and(gte(bodyMeasurements.measuredAt, new Date(w.ms - 60000)), lte(bodyMeasurements.measuredAt, new Date(w.ms + 60000))))
+      .all()
+      .find((row) => row.externalId !== null && row.externalId !== w.externalId);
+    if (twin) continue;
+    const row = { date: toDateKey(measuredAt), measuredAt, weightKg: w.kg, source: weightSource, externalId: w.externalId };
     db.insert(bodyMeasurements).values(row).onConflictDoUpdate({ target: bodyMeasurements.externalId, set: row }).run();
   }
 }

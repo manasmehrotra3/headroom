@@ -49,11 +49,12 @@ export function currentBikeZones(): BikeZones | null {
 }
 
 /** Longest single run and ride actually completed, for the race-readiness check. */
-export function longestSessions(): { runMin: number; rideMin: number } {
+export function longestSessions(): { runMin: number; rideMin: number; swimM: number } {
   const rows = db.select().from(activities).all().filter((a) => a.duplicateOf === null);
   const longest = (type: 'run' | 'cycling') =>
     rows.filter((a) => a.type === type).reduce((max, a) => Math.max(max, a.durationSec / 60), 0);
-  return { runMin: longest('run'), rideMin: longest('cycling') };
+  const swimM = rows.filter((a) => a.type === 'swim').reduce((max, a) => Math.max(max, a.distanceM ?? 0), 0);
+  return { runMin: longest('run'), rideMin: longest('cycling'), swimM };
 }
 
 /** Recent rides, for the average-speed estimate used in the race prediction. */

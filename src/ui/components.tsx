@@ -164,6 +164,7 @@ export function Field({
   keyboardType,
   placeholder,
   multiline,
+  secret,
 }: {
   label: string;
   hint?: string;
@@ -172,6 +173,8 @@ export function Field({
   keyboardType?: KeyboardTypeOptions;
   placeholder?: string;
   multiline?: boolean;
+  /** Hides what is typed and keeps the keyboard from learning or correcting it. For keys and passwords. */
+  secret?: boolean;
 }) {
   return (
     <View style={{ marginBottom: space.md }}>
@@ -183,6 +186,9 @@ export function Field({
         placeholder={placeholder}
         placeholderTextColor={colors.textDim}
         multiline={multiline}
+        secureTextEntry={secret}
+        autoCapitalize={secret ? 'none' : undefined}
+        autoCorrect={secret ? false : undefined}
         style={[styles.input, multiline && { minHeight: 90, textAlignVertical: 'top' }]}
       />
       {hint ? <Text style={[styles.dim, { marginTop: space.xs }]}>{hint}</Text> : null}

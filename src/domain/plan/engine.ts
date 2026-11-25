@@ -2,9 +2,10 @@ import { TUNABLES } from '../../config/tunables';
 import { BODY_AREAS, type BodyArea } from '../bodyAreas';
 import { buildEasySpin } from '../cycling/workouts';
 import { buildEasyRun } from '../running/workouts';
-import { WEEKLY_RULES } from './rules';
+import { buildSwim } from '../swimming/workouts';
+import { BIKE_STOPPING_AREAS, RUN_STOPPING_AREAS, SWIM_STOPPING_AREAS, WEEKLY_RULES } from './rules';
 import type { DayContext, DetailContext, PlanChange, PlannedSession, WeekContext } from './types';
-import { buildBaseWeek, detailFor, isBike, isRun, isStrength } from './weekBuilder';
+import { buildBaseWeek, detailFor, isBike, isRun, isStrength, isSwim } from './weekBuilder';
 
 export interface WeekPlan {
   sessions: PlannedSession[];
@@ -28,13 +29,12 @@ export function applyRules(sessions: PlannedSession[], ctx: WeekContext): WeekPl
   return { sessions: current, changes };
 }
 
-const RUN_STOPPING_AREAS: BodyArea[] = ['knee', 'ankle', 'hip', 'foot', 'shin', 'calf', 'hamstring', 'groin'];
-const BIKE_STOPPING_AREAS: BodyArea[] = ['knee', 'hip', 'groin', 'lower_back'];
 const areaLabel = (area: BodyArea) => BODY_AREAS.find((a) => a.id === area)?.label.toLowerCase() ?? area;
 
 /**
  * Day-of adjustment from the morning check-in and readiness:
  *  - pain in a running area turns a run into mobility; the same for rides on bike-loading areas
+ *    and swims on a sore shoulder, neck or elbow
  *  - low readiness swaps in the easier version of the same session, never a skip
  * Returns the session unchanged when nothing applies.
  */
@@ -46,8 +46,13 @@ export function adjustForDay(session: PlannedSession, ctx: DayContext): { sessio
 
   const runStopper = ctx.painAreas.find((a) => RUN_STOPPING_AREAS.includes(a));
   const bikeStopper = ctx.painAreas.find((a) => BIKE_STOPPING_AREAS.includes(a));
+  const swimStopper = ctx.painAreas.find((a) => SWIM_STOPPING_AREAS.includes(a));
 
-  if (runStopper && isRun(next)) {
+  if (swimStopper && isSwim(next)) {
+    const reason = `Today's swim is mobility instead: you reported ${areaLabel(swimStopper)} pain.`;
+    changes.push({ ruleId: 'pain', date: ctx.date, reason });
+    next = { ...next, sessionType: 'mobility', targetMin: 15, detail: detailFor('mobility', 15, detailCtx), reason };
+  } else if (runStopper && isRun(next)) {
     const reason = `Today's run is mobility instead: you reported ${areaLabel(runStopper)} pain. Never push through pain.`;
     changes.push({ ruleId: 'pain', date: ctx.date, reason });
     next = { ...next, sessionType: 'mobility', targetMin: 15, detail: detailFor('mobility', 15, detailCtx), reason };
@@ -74,6 +79,10 @@ export function adjustForDay(session: PlannedSession, ctx: DayContext): { sessio
       const reason = `Easy spin instead of the intervals today: readiness is low.`;
       changes.push({ ruleId: 'low_readiness', date: ctx.date, reason });
       next = { ...next, variant: 'easy', detail: buildEasySpin(next.targetMin, true), reason: next.reason ? `${next.reason} ${reason}` : reason };
+    } else if (next.sessionType === 'swim_endurance') {
+      const reason = `Technique swim instead of the endurance set today: readiness is low. Same time in the water.`;
+      changes.push({ ruleId: 'low_readiness', date: ctx.date, reason });
+      next = { ...next, variant: 'easy', detail: buildSwim('technique', next.targetMin), reason: next.reason ? `${next.reason} ${reason}` : reason };
     }
   }
 

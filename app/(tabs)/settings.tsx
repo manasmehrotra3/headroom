@@ -50,7 +50,7 @@ export default function SettingsTab() {
       <RowGroup>
         <RowLink
           label={`Garmin & ${PHONE_HEALTH.name}`}
-          value={current?.dataSource === 'mock' ? 'demo data' : current?.healthConnectConnected ? 'connected' : 'not connected'}
+          value={current?.dataSource === 'mock' ? 'demo data' : current?.dataSource === 'garmin_api' ? 'Garmin direct' : current?.healthConnectConnected ? 'connected' : 'not connected'}
           onPress={() => router.push('/edit/health')}
         />
         <RowLink label="Notifications" value={notificationMinutes === null ? undefined : formatTimeOfDay12h(notificationMinutes)} onPress={() => router.push('/edit/notifications')} />

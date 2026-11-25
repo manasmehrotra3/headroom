@@ -121,7 +121,7 @@ export default function ProgressTab() {
         .slice(-10)
         .reverse()
         .map((row) => (
-          <RowLink key={row.id} label={formatShortDate(row.date)} value={`${formatLb(row.weightKg)}${row.waistCm ? ` · ${(row.waistCm / 2.54).toFixed(1)} in` : ''}${row.source === 'health_connect' || row.source === 'apple_health' ? ' · watch' : ''}`} onPress={() => confirmDelete(row.id)} />
+          <RowLink key={row.id} label={formatShortDate(row.date)} value={`${formatLb(row.weightKg)}${row.waistCm ? ` · ${(row.waistCm / 2.54).toFixed(1)} in` : ''}${row.source === 'manual' ? '' : ' · watch'}`} onPress={() => confirmDelete(row.id)} />
         ))}
       <Body dim>Tap a weigh-in to delete it.</Body>
       <RowLink label="Run history" onPress={() => router.push('/insights/runs')} />

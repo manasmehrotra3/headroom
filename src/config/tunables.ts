@@ -215,6 +215,27 @@ export const TUNABLES = {
     cadence: { endurance: '85-95 rpm', tempo: '85-90 rpm', threshold: '90-95 rpm', vo2: '95-105 rpm' },
   },
 
+  swim: {
+    /** The Monday the triathlon week first includes swims. Weeks before it have none. */
+    startDate: '2026-12-07',
+    /** Pool length in metres, used to say how many lengths each repeat is. Sets are written in 50s and 100s, which suit a 25 m or 50 m pool. */
+    poolLengthM: 50,
+    /** Metres in each session of the first week. 800 suits someone who cannot yet swim 200 m without stopping. */
+    startDistanceM: 800,
+    /** What the sessions build to. The endurance swim ends past the 70.3's 1,900 m. */
+    maxDistanceM: { technique: 1200, endurance: 2200 },
+    /** Session distance grows by this much a week until it reaches the maximum. */
+    weeklyGrowth: 0.1,
+    /**
+     * Minutes per 100 m including the rests at the wall, used to turn metres into planned time.
+     * 3 is a beginner. The daily time cap limits a session to about 1,700 m at this pace, so
+     * lower it as you get faster and the sessions will grow past that.
+     */
+    minPer100m: 3,
+    /** Shortest session worth getting in the water for, in metres. */
+    minDistanceM: 400,
+  },
+
   race: {
     /** Long-session progression: where the ramp starts, in minutes. */
     startLongRideMin: 60,
@@ -248,6 +269,13 @@ export const TUNABLES = {
     /** Later syncs re-read this many days so late-arriving Garmin data is picked up. */
     overlapDays: 3,
     /**
+     * The only app whose steps, active calories, distance and workouts are read from Health
+     * Connect. Other apps (Samsung Health counting with the phone, say) also write steps, and
+     * Health Connect's own total fills gaps in the watch's record with them, so it reads higher
+     * than Garmin Connect. Theirs are never used, even on a day the watch wrote nothing.
+     */
+    watchApp: 'com.garmin.android.apps.connectmobile',
+    /**
      * Background task interval (minutes); the phone runs it roughly this often, no more.
      * This also sets how fresh the lock screen widget can be, since nothing else refreshes the
      * numbers while the app is closed. Android will not run it more often than every 15 minutes.
@@ -255,6 +283,27 @@ export const TUNABLES = {
     backgroundIntervalMin: 30,
     /** Earliest hour the background task will sync for today's digest. */
     earliestSyncHour: 3,
+  },
+
+  garmin: {
+    /** Days per request. Garmin's sleep endpoint refuses more than 31; 28 leaves room. */
+    windowDays: 28,
+    /** Activities per page. Garmin's own client asks for 20. */
+    pageSize: 20,
+    /** Ask for a new bearer token when the saved one has less than this left. Tokens last a day. */
+    tokenRefreshMarginMin: 60,
+    /** Garmin publishes no rate limits, so on "too many requests" wait and retry this many times. */
+    retries: 3,
+    /** Wait before the first retry, doubled each time, unless Garmin says how long to wait. */
+    retryWaitSec: 5,
+    /** Never wait longer than this for one retry, whatever Garmin asks for. */
+    maxRetryWaitSec: 60,
+    /** Give up on a request that has not answered in this long. */
+    timeoutSec: 30,
+    /** Start warning this many days before the key's expiry date. */
+    keyWarningDays: 14,
+    /** Keys are created for a year unless you pick something else in Garmin Connect. */
+    keyLifetimeDays: 365,
   },
 
   dedupe: {

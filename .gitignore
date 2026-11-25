@@ -82,3 +82,7 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Unedited Garmin Personal API responses saved by scripts/capture-garmin-fixtures.js. They hold
+# account ids and GPS start points; the cleaned copies in src/sources/__fixtures__ are what is kept.
+/.garmin-capture/

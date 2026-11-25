@@ -14,6 +14,7 @@ import { SESSION_TYPES } from '@/domain/schedule';
 import { suggestWeight } from '@/domain/strength/progression';
 import { estimateSessionSec } from '@/domain/strength/sessionTime';
 import { plannedSets } from '@/domain/strength/workoutBuilder';
+import { lengthsOf } from '@/domain/swimming/workouts';
 import { beginWorkout, previewWorkout, templateName } from '@/features/workout/startWorkout';
 import { Body, Button, Card, Screen, SectionLabel, Title } from '@/ui/components';
 import { formatLb, formatLongDate } from '@/ui/format';
@@ -30,7 +31,7 @@ const STATUS_NOTE: Partial<Record<string, string>> = {
 /**
  * The whole plan for one day, read only: what was scheduled, why it looks like this, and the
  * full structure. Runs and rides have their own screens; this covers strength, mobility,
- * tennis and rest days.
+ * swims, tennis and rest days.
  */
 export default function PlanDayScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -76,7 +77,7 @@ export default function PlanDayScreen() {
   }
 
   const type = SESSION_TYPES[row.sessionType];
-  const heading = templateName(row.sessionType) ?? type.label;
+  const heading = detail.kind === 'swim' ? detail.title : (templateName(row.sessionType) ?? type.label);
   const variant = row.variant === 'easy' ? 'easy version' : row.variant === 'deload' ? 'deload week' : null;
   const subtitle = [
     formatLongDate(row.date),
@@ -136,6 +137,37 @@ export default function PlanDayScreen() {
             ))}
             {estimateMin ? <Body dim>About {estimateMin} min including the warm-up, counting the top of every rep range.</Body> : null}
             <Body dim>Tap an exercise for the setup, cues and alternatives. Weights are rebuilt from your last sessions when you press Start.</Body>
+          </>
+        ) : null}
+
+        {detail.kind === 'swim' ? (
+          <>
+            <SectionLabel>
+              {detail.totalM.toLocaleString('en-US')} m · {TUNABLES.swim.poolLengthM} m pool
+            </SectionLabel>
+            {detail.steps.map((step, i) => {
+              const lengths = lengthsOf(step.distanceM);
+              return (
+                <Card key={i}>
+                  <View style={styles.row}>
+                    <Text style={styles.name}>
+                      {i + 1}. {step.label}
+                    </Text>
+                    <Text style={styles.sets}>
+                      {step.reps} × {step.distanceM} m
+                    </Text>
+                  </View>
+                  <Body dim>
+                    {lengths === 1 ? 'one length each' : `${lengths} lengths each`} · rest {step.rest}
+                  </Body>
+                  <Body dim>{step.note}</Body>
+                </Card>
+              );
+            })}
+            <Body dim>
+              Record it on the watch as a pool swim with the pool set to {TUNABLES.swim.poolLengthM} m. It syncs on its own and ticks this session off. If the distance feels like too
+              much, stop early: finishing with a good stroke matters more than the total.
+            </Body>
           </>
         ) : null}
 
