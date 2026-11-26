@@ -1,6 +1,6 @@
 import { Stack, router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
 
 import { activitiesBetween } from '@/db/repos/activityRepo';
 import { addDays, todayKey } from '@/domain/dates';
@@ -10,7 +10,7 @@ import { LineChartCard } from '@/ui/charts';
 import { Body, Card, Chips, Screen, SCREEN_PADDING, SectionLabel, Title } from '@/ui/components';
 import type { ActivityRow } from '@/db/repos/activityRepo';
 import { formatShortDate } from '@/ui/format';
-import { colors, font, radius, space } from '@/ui/theme';
+import { colors, font, radius, space, themedStyles } from '@/ui/theme';
 
 const RANGES = [
   { id: '42', label: '6 weeks' },
@@ -123,7 +123,7 @@ export default function RunHistory() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -138,4 +138,4 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: font.body, fontWeight: '600' },
   meta: { color: colors.textDim, fontSize: font.small },
   chev: { color: colors.textDim, fontSize: font.large },
-});
+}));

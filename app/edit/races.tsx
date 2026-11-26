@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 
 import { db } from '@/db/client';
 import { loadSettings } from '@/db/repos/profileRepo';
@@ -13,7 +13,7 @@ import { RACE_TYPES, RACE_TYPE_IDS, racePhase, PHASE_LABELS, type Race, type Rac
 import { Body, Button, Card, Chips, Field, Screen, SectionLabel, Stepper, Title } from '@/ui/components';
 import { DurationField } from '@/ui/fields';
 import { formatShortDate } from '@/ui/format';
-import { colors, font, space } from '@/ui/theme';
+import { colors, font, space, themedStyles } from '@/ui/theme';
 
 const TYPE_OPTIONS = RACE_TYPE_IDS.map((id) => ({ id, label: RACE_TYPES[id].label }));
 const PRIORITY = [
@@ -165,7 +165,7 @@ export default function RacesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   name: { color: colors.text, fontSize: font.large, fontWeight: '600', flexShrink: 1 },
   badge: { color: colors.accent, fontSize: font.body, fontWeight: '700' },
-});
+}));

@@ -55,6 +55,8 @@ export const settings = sqliteTable('settings', {
   stepGoal: integer('step_goal').notNull().default(8000),
   /** "Cook once, eat twice": repeat dinner the next day as leftovers. */
   cookOnce: integer('cook_once', { mode: 'boolean' }).notNull().default(false),
+  /** Which palette to paint: `system` follows the phone's light/dark setting. */
+  themeMode: text('theme_mode', { enum: ['system', 'light', 'dark'] }).notNull().default('dark'),
   /** Let the next A race reshape the weekly template (long ride / long run days). */
   useRaceTemplate: integer('use_race_template', { mode: 'boolean' }).notNull().default(true),
 });

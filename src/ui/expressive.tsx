@@ -21,7 +21,7 @@ import Animated, {
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { EXPRESSIVE_FAST_SPRING, EXPRESSIVE_GENTLE_SPRING, EXPRESSIVE_SPRING, M3Pressable } from './motion';
-import { colors, font, radius, space } from './theme';
+import { colors, font, radius, space, themedStyles } from './theme';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
@@ -528,7 +528,7 @@ export function AnimatedLinearBar({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   ringCenter: {
     position: 'absolute',
     alignItems: 'center',
@@ -631,4 +631,4 @@ const styles = StyleSheet.create({
     gap: 3,
     marginBottom: space.md,
   },
-});
+}));

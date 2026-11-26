@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, Vibration, View } from 'react-native';
+import { Text, Vibration, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { formatDuration } from '@/domain/units';
@@ -7,7 +7,7 @@ import { useActiveWorkout } from '@/stores/activeWorkout';
 import { cancelRestNotification } from '@/sync/notifications';
 import { WavyLinearProgress } from '@/ui/expressive';
 import { M3Pressable } from '@/ui/motion';
-import { colors, font, radius, space, TAP_MIN } from '@/ui/theme';
+import { colors, font, radius, space, TAP_MIN, themedStyles } from '@/ui/theme';
 
 /**
  * Full-width M3 Expressive countdown shown after a set is logged.
@@ -58,7 +58,7 @@ export function RestTimer() {
         <WavyLinearProgress
           progress={progress}
           color={colors.tertiary}
-          trackColor="rgba(255, 255, 255, 0.16)"
+          trackColor={colors.trackOnContainer}
           height={18}
           animateWave
         />
@@ -76,7 +76,7 @@ export function RestTimer() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   box: {
     backgroundColor: colors.tertiaryContainer,
     borderRadius: radius.xl,
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.24)',
+    backgroundColor: colors.scrimSoft,
   },
   tonalButtonText: { color: colors.onTertiaryContainer, fontSize: font.body + 1, fontWeight: '700' },
   primaryButton: {
@@ -116,4 +116,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   primaryButtonText: { color: colors.onPrimary, fontSize: font.body + 1, fontWeight: '800' },
-});
+}));

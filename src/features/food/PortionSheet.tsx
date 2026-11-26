@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, Text, View } from 'react-native';
 
 import { isFavorite, per100, servingsFor, toggleFavorite, type FoodRow } from '@/db/repos/nutritionRepo';
 import { scale } from '@/domain/nutrition/types';
 import { Body, Button, Chips, Stepper } from '@/ui/components';
-import { colors, font, radius, space } from '@/ui/theme';
+import { colors, font, radius, space, themedStyles } from '@/ui/theme';
 
 /** Pick a household serving and a quantity, see the macros, log it. */
 export function PortionSheet({ food, onLog, onClose }: { food: FoodRow | null; onLog: (input: { servingLabel: string; quantity: number; grams: number }) => void; onClose: () => void }) {
@@ -48,9 +48,9 @@ export function PortionSheet({ food, onLog, onClose }: { food: FoodRow | null; o
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
+const styles = themedStyles(() => ({
+  backdrop: { flex: 1, backgroundColor: colors.scrim },
   sheet: { backgroundColor: colors.sheet, padding: space.lg, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, gap: space.md },
   title: { color: colors.text, fontSize: font.large, fontWeight: '600', flexShrink: 1 },
   macros: { color: colors.accent, fontSize: font.body },
-});
+}));

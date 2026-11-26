@@ -8,7 +8,6 @@
 import { Children, cloneElement, isValidElement, useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import {
   ScrollView,
-  StyleSheet,
   Text,
   View,
   type LayoutChangeEvent,
@@ -20,21 +19,29 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import { AnimatedLinearBar, ConnectedButtonGroup, ScallopBadge, segmentedCorners } from './expressive';
 import { InfoIcon } from './icons';
 import { EXPRESSIVE_SPRING, M3_LAYOUT, M3Pressable } from './motion';
-import { colors, font, radius, space } from './theme';
+import { colors, font, radius, space, themedStyles } from './theme';
 
 export type Tone = 'neutral' | 'accent' | 'tertiary' | 'warning' | 'danger';
 
-const TONE_STYLES: Record<Tone, { backgroundColor: string; color: string }> = {
-  neutral: { backgroundColor: colors.secondaryContainer, color: colors.onSecondaryContainer },
-  accent: { backgroundColor: colors.primaryContainer, color: colors.onPrimaryContainer },
-  tertiary: { backgroundColor: colors.tertiaryContainer, color: colors.onTertiaryContainer },
-  warning: { backgroundColor: colors.warningContainer, color: colors.onWarningContainer },
-  danger: { backgroundColor: colors.errorContainer, color: colors.onErrorContainer },
-};
+/** Read per render (not once at import) so a theme switch repaints the tonal chips. */
+function toneStyle(tone: Tone): { backgroundColor: string; color: string } {
+  switch (tone) {
+    case 'accent':
+      return { backgroundColor: colors.primaryContainer, color: colors.onPrimaryContainer };
+    case 'tertiary':
+      return { backgroundColor: colors.tertiaryContainer, color: colors.onTertiaryContainer };
+    case 'warning':
+      return { backgroundColor: colors.warningContainer, color: colors.onWarningContainer };
+    case 'danger':
+      return { backgroundColor: colors.errorContainer, color: colors.onErrorContainer };
+    default:
+      return { backgroundColor: colors.secondaryContainer, color: colors.onSecondaryContainer };
+  }
+}
 
 /** Small tonal M3 status pill, e.g. "Sweet spot" or "Good". */
 export function Chip({ label, tone = 'neutral' }: { label: string; tone?: Tone }) {
-  const { backgroundColor, color } = TONE_STYLES[tone];
+  const { backgroundColor, color } = toneStyle(tone);
   return (
     <View style={[styles.chip, { backgroundColor }]}>
       <Text style={[styles.chipText, { color }]} numberOfLines={1}>
@@ -100,7 +107,7 @@ export function StatCard({
   pager,
 }: StatCardProps & { pager?: { count: number; index: number } }) {
   const badgeTone = chip?.tone ?? 'accent';
-  const badgeStyle = TONE_STYLES[badgeTone];
+  const badgeStyle = toneStyle(badgeTone);
 
   return (
     <M3Pressable
@@ -263,7 +270,7 @@ export function ListRow({
   first?: boolean;
   last?: boolean;
 }) {
-  const captionColor = highlight ? colors.onPrimaryContainer : TONE_STYLES[captionTone].color;
+  const captionColor = highlight ? colors.onPrimaryContainer : toneStyle(captionTone).color;
 
   return (
     <Animated.View layout={M3_LAYOUT}>
@@ -321,7 +328,7 @@ export function ListGroup({ children }: { children: ReactNode }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   chip: {
     alignSelf: 'flex-start',
     borderRadius: radius.pill,
@@ -394,4 +401,4 @@ const styles = StyleSheet.create({
   rowSubtitle: { color: colors.onSurfaceVariant, fontSize: font.small, marginTop: 2 },
   rowValue: { color: colors.onSurface, fontSize: font.body + 1, fontWeight: '800', fontVariant: ['tabular-nums'] },
   rowCaption: { fontSize: font.small - 1, fontWeight: '600', marginTop: 2 },
-});
+}));

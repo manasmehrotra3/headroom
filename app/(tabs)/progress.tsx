@@ -2,7 +2,7 @@ import { asc, gte } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 
 import { TUNABLES } from '@/config/tunables';
 import { getExercise } from '@/data/exercises';
@@ -28,7 +28,7 @@ import { ScallopBadge } from '@/ui/expressive';
 import { NumberField } from '@/ui/fields';
 import { formatLb, formatShortDate } from '@/ui/format';
 import { M3Enter, hapticSuccess } from '@/ui/motion';
-import { colors, font, radius, space } from '@/ui/theme';
+import { colors, font, radius, space, themedStyles } from '@/ui/theme';
 
 /** Weight trend, weigh-in logging, VO2 max, and the Sunday weekly review. */
 export default function ProgressTab() {
@@ -289,7 +289,7 @@ function WeeklyReview() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   heroHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
   heroNum: { color: colors.onSurface, fontSize: font.hero, fontWeight: '800', letterSpacing: -0.6, fontVariant: ['tabular-nums'] },
   h: { color: colors.onSurface, fontSize: font.body, fontWeight: '700' },
@@ -304,4 +304,4 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: space.md,
   },
-});
+}));

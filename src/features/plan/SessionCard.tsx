@@ -3,7 +3,7 @@
  * so starting a workout and moving/skipping it sit in one unified tactile control.
  */
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { TUNABLES } from '@/config/tunables';
@@ -15,7 +15,7 @@ import { Chip } from '@/ui/cards';
 import { SplitButton } from '@/ui/expressive';
 import { formatShortDate } from '@/ui/format';
 import { M3_LAYOUT, M3Pressable } from '@/ui/motion';
-import { colors, font, radius, space } from '@/ui/theme';
+import { colors, font, radius, space, themedStyles } from '@/ui/theme';
 
 const STATUS_LABEL: Record<PlannedSession['status'], string> = {
   planned: '',
@@ -148,7 +148,7 @@ export function SessionCard({ session, isToday, onActions }: { session: PlannedS
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   card: {
     borderRadius: radius.xl,
     padding: space.lg,
@@ -185,4 +185,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tonalPillText: { color: colors.onSecondaryContainer, fontSize: font.body, fontWeight: '700' },
-});
+}));

@@ -9,6 +9,7 @@ import { formatTimeOfDay12h, parseTimeOfDay } from '@/domain/dates';
 import { TabHeader } from '@/features/navigation/TabHeader';
 import { PHONE_HEALTH } from '@/sources/phoneHealth';
 import { Body, Card, RowGroup, RowLink, Screen, SectionLabel } from '@/ui/components';
+import { ConnectedButtonGroup } from '@/ui/expressive';
 import { DISCLAIMER } from '@/ui/disclaimer';
 import {
   CalendarIcon,
@@ -23,7 +24,13 @@ import {
   TrainIcon,
 } from '@/ui/icons';
 import { M3Enter } from '@/ui/motion';
-import { colors } from '@/ui/theme';
+import { colors, type ThemeMode } from '@/ui/theme';
+
+const THEME_OPTIONS = [
+  { id: 'system', label: 'System' },
+  { id: 'light', label: 'Light' },
+  { id: 'dark', label: 'Dark' },
+] as const satisfies readonly { id: ThemeMode; label: string }[];
 
 export default function SettingsTab() {
   const { data: settingsRows } = useLiveQuery(db.select().from(settings));
@@ -80,6 +87,19 @@ export default function SettingsTab() {
       </M3Enter>
 
       <M3Enter index={3}>
+        <SectionLabel>Appearance</SectionLabel>
+        <Card tone="low">
+          <ConnectedButtonGroup
+            options={THEME_OPTIONS}
+            value={current?.themeMode ?? 'dark'}
+            onChange={(mode) => db.update(settings).set({ themeMode: mode }).where(eq(settings.id, 1)).run()}
+            size="large"
+          />
+          <Body dim>System follows your phone&apos;s light or dark setting. Switching repaints the app straight away.</Body>
+        </Card>
+      </M3Enter>
+
+      <M3Enter index={4}>
         <SectionLabel>About</SectionLabel>
         <Card tone="low">
           <Body dim>{DISCLAIMER}</Body>

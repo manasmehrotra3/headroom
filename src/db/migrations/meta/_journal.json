@@ -43,6 +43,13 @@
       "when": 1795648323833,
       "tag": "0005_special_maggott",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1795664683801,
+      "tag": "0006_gray_lyja",
+      "breakpoints": true
     }
   ]
 }

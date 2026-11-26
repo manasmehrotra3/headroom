@@ -2,12 +2,12 @@
  * Steps against the daily goal, always visible on Today.
  * Uses Material 3 Expressive's native animated WavyLinearProgress indicator.
  */
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { Chip } from '@/ui/cards';
 import { WavyLinearProgress } from '@/ui/expressive';
 import { M3Pressable } from '@/ui/motion';
-import { colors, font, radius, space } from '@/ui/theme';
+import { colors, font, radius, space, themedStyles } from '@/ui/theme';
 
 export function StepsCard({
   steps,
@@ -61,7 +61,7 @@ export function StepsCard({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
@@ -75,4 +75,4 @@ const styles = StyleSheet.create({
   goal: { color: colors.onSurfaceVariant, fontSize: font.small - 1, fontVariant: ['tabular-nums'], flexShrink: 1, textAlign: 'right' },
   value: { color: colors.onSurface, fontSize: 34, fontWeight: '800', letterSpacing: -0.6, fontVariant: ['tabular-nums'] },
   waveWrap: { marginTop: space.xs },
-});
+}));

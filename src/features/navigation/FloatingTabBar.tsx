@@ -9,13 +9,13 @@
  */
 import type { BottomTabBarProps } from 'expo-router/tabs';
 import { useEffect, useState, type ComponentType } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
+import { Text, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { FoodIcon, PlusIcon, ProgressIcon, TodayIcon, TrainIcon } from '@/ui/icons';
 import { EXPRESSIVE_FAST_SPRING, EXPRESSIVE_SPRING, M3Pressable } from '@/ui/motion';
-import { colors, radius, space } from '@/ui/theme';
+import { colors, elevation, radius, space, themedStyles } from '@/ui/theme';
 
 import { QuickAddSheet } from './QuickAddSheet';
 
@@ -191,7 +191,7 @@ function BottomFade() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   wrap: {
     position: 'absolute',
     left: space.lg,
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     padding: TOOLBAR_PAD,
     shadowColor: '#000',
-    shadowOpacity: 0.45,
+    shadowOpacity: elevation.shadowOpacity,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 8 },
     elevation: 12,
@@ -248,9 +248,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.45,
+    shadowOpacity: elevation.shadowOpacity,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
     elevation: 14,
   },
-});
+}));

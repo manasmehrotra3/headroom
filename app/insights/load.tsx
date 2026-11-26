@@ -12,7 +12,9 @@ import { Body, Card, RowLink, Screen, SectionLabel, Title } from '@/ui/component
 import { formatShortDate } from '@/ui/format';
 import { colors, font } from '@/ui/theme';
 
-const LABEL_COLORS: Record<AcwrLabel, string> = { low: colors.info, sweet_spot: colors.accent, caution: colors.warning, high: colors.danger, insufficient: colors.textDim };
+/** Read per render (not once at import) so a theme switch repaints the label. */
+const labelColor = (label: AcwrLabel): string =>
+  ({ low: colors.info, sweet_spot: colors.accent, caution: colors.warning, high: colors.danger, insufficient: colors.textDim })[label];
 
 export default function LoadInsight() {
   const today = todayKey();
@@ -28,7 +30,7 @@ export default function LoadInsight() {
       <Stack.Screen options={{ title: 'Training load' }} />
       <Screen edges={['bottom']}>
         <Title subtitle={ACWR_LABELS[label]}>
-          <Text style={{ color: LABEL_COLORS[label] }}>{acwr === null ? '—' : acwr.toFixed(2)}</Text>
+          <Text style={{ color: labelColor(label) }}>{acwr === null ? '—' : acwr.toFixed(2)}</Text>
         </Title>
         <Card>
           <Body>Acute (7 days): {Math.round(metrics?.acuteLoad ?? 0)}</Body>

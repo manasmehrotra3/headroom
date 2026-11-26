@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -23,7 +22,7 @@ import { segmentedCorners } from './expressive';
 import { GradientBackdrop } from './GradientBackdrop';
 import { CheckIcon } from './icons';
 import { M3_LAYOUT, M3Pressable } from './motion';
-import { colors, font, radius, space, TAP_MIN } from './theme';
+import { colors, font, radius, space, TAP_MIN, themedStyles } from './theme';
 
 /** Room left under the last card on a tab screen so the Floating Toolbar never covers it. */
 export const TAB_BAR_CLEARANCE = 124;
@@ -378,7 +377,7 @@ export function WarningList({ warnings }: { warnings: string[] }) {
   );
 }
 
-export const styles = StyleSheet.create({
+export const styles = themedStyles(() => ({
   screen: { flex: 1, backgroundColor: colors.background },
   screenContent: SCREEN_PADDING,
   footer: {
@@ -516,4 +515,4 @@ export const styles = StyleSheet.create({
     marginBottom: space.md,
     gap: space.xs,
   },
-});
+}));

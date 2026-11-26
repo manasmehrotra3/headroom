@@ -5,17 +5,30 @@ import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, AppState, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Appearance, AppState, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
 
 import { db } from '@/db/client';
 import migrations from '@/db/migrations/migrations';
 import { ensureDefaults } from '@/db/repos/setup';
 import { settings } from '@/db/schema';
 import { onAppForeground, onAppStart } from '@/sync/appStart';
-import { colors, font, space } from '@/ui/theme';
+import { colorScheme, colors, font, setColorScheme, space, type ColorScheme, type ThemeMode } from '@/ui/theme';
 
 // Registers the background sync task at import time, as expo-task-manager requires.
 import '@/sync/backgroundTask';
+
+/**
+ * Paints the very first frame — the migration spinner, which renders before the settings query can
+ * run — in the scheme that was chosen last, so a light-theme user gets no dark flash on a cold
+ * start. On a first launch the settings table does not exist yet, and the default dark palette
+ * stands until `usePaintedScheme` takes over.
+ */
+try {
+  const stored = db.select({ themeMode: settings.themeMode }).from(settings).where(eq(settings.id, 1)).get()?.themeMode;
+  if (stored) setColorScheme(stored === 'system' ? (Appearance.getColorScheme() === 'light' ? 'light' : 'dark') : stored);
+} catch {
+  // No settings table yet: first launch.
+}
 
 const queryClient = new QueryClient();
 
@@ -44,13 +57,35 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   );
 }
 
+/**
+ * Turns the stored preference into the scheme to paint and swaps the palette before anything below
+ * renders. The returned scheme is used as a remount key: screens read `colors` straight from the
+ * module, so a new palette only reaches them when they render again.
+ */
+function usePaintedScheme(mode: ThemeMode | null): ColorScheme {
+  const phone = useColorScheme();
+
+  // Keeps the keyboard, text selection and system dialogs on the same scheme as the app.
+  useEffect(() => {
+    if (mode) Appearance.setColorScheme(mode === 'system' ? 'unspecified' : mode);
+  }, [mode]);
+
+  // `mode` is null until the settings row arrives. Repainting a default in the meantime would
+  // flash dark over the spinner on every cold start, so the scheme read at import time stands.
+  if (!mode) return colorScheme();
+
+  const scheme: ColorScheme = mode === 'system' ? (phone === 'light' ? 'light' : 'dark') : mode;
+  setColorScheme(scheme);
+  return scheme;
+}
+
 export default function RootLayout() {
   // Applies any new migrations on launch, so app updates keep existing data.
   const { success, error } = useMigrations(db, migrations);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StatusBar style="light" />
+      <StatusBar style="auto" />
       {error ? (
         <Centered>
           <Text style={{ color: colors.danger, fontSize: font.body }}>Database error: {error.message}</Text>
@@ -68,6 +103,7 @@ function App() {
   useState(() => ensureDefaults());
   const { data, updatedAt } = useLiveQuery(db.select().from(settings).where(eq(settings.id, 1)));
   const onboarded = data[0]?.onboardingComplete ?? false;
+  const scheme = usePaintedScheme(data[0]?.themeMode ?? null);
 
   // Sync, build the week, schedule notifications: on first open after onboarding and on every return to the foreground.
   useEffect(() => {
@@ -82,30 +118,33 @@ function App() {
   if (!updatedAt) return <Loading />;
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.background },
-        animation: 'slide_from_right',
-        animationDuration: 260,
-      }}
-    >
-      <Stack.Protected guard={onboarded}>
-        <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-        <Stack.Screen name="edit" />
-        <Stack.Screen name="exercises" />
-        <Stack.Screen name="workout/[id]" options={{ animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="plan" />
-        <Stack.Screen name="run" />
-        <Stack.Screen name="ride" />
-        <Stack.Screen name="log" options={{ animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="insights" />
-        <Stack.Screen name="food" />
-      </Stack.Protected>
-      <Stack.Protected guard={!onboarded}>
-        <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
-      </Stack.Protected>
-    </Stack>
+    // Remounted on a theme switch so every mounted screen repaints with the new palette.
+    <View key={scheme} style={{ flex: 1, backgroundColor: colors.background }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+          animation: 'slide_from_right',
+          animationDuration: 260,
+        }}
+      >
+        <Stack.Protected guard={onboarded}>
+          <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+          <Stack.Screen name="edit" />
+          <Stack.Screen name="exercises" />
+          <Stack.Screen name="workout/[id]" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="plan" />
+          <Stack.Screen name="run" />
+          <Stack.Screen name="ride" />
+          <Stack.Screen name="log" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="insights" />
+          <Stack.Screen name="food" />
+        </Stack.Protected>
+        <Stack.Protected guard={!onboarded}>
+          <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+        </Stack.Protected>
+      </Stack>
+    </View>
   );
 }
 

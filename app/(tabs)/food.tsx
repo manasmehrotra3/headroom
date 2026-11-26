@@ -1,7 +1,7 @@
 import { desc, eq } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { router } from 'expo-router';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 
 import { db } from '@/db/client';
 import { copyYesterday, dayTargets, dayTypeFor, deleteFoodLog, logPlannedMeal, plannedMealsOn } from '@/db/repos/nutritionRepo';
@@ -13,7 +13,7 @@ import { TabHeader } from '@/features/navigation/TabHeader';
 import { Body, Button, Card, RowGroup, RowLink, Screen, SectionLabel } from '@/ui/components';
 import { M3Enter, M3Pressable, hapticSuccess } from '@/ui/motion';
 import { Ring } from '@/ui/Ring';
-import { colors, font, radius, space } from '@/ui/theme';
+import { colors, font, radius, space, themedStyles } from '@/ui/theme';
 
 export default function FoodTab() {
   const today = todayKey();
@@ -144,7 +144,7 @@ export default function FoodTab() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   ringsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: space.xs },
   macroChipsRow: { flexDirection: 'row', gap: space.sm, marginTop: space.xs },
   macroChip: {
@@ -181,10 +181,10 @@ const styles = StyleSheet.create({
   planned: { color: colors.onTertiaryContainer, fontSize: font.small + 1, fontWeight: '700', lineHeight: 19 },
   plannedMeta: { color: colors.onTertiaryContainer, opacity: 0.82, fontSize: font.small - 1, marginTop: 2 },
   recipePill: {
-    backgroundColor: 'rgba(0, 0, 0, 0.22)',
+    backgroundColor: colors.scrimSoft,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: radius.pill,
   },
   recipePillText: { color: colors.onTertiaryContainer, fontSize: font.caption + 1, fontWeight: '700' },
-});
+}));

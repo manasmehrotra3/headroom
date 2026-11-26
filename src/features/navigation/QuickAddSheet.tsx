@@ -10,7 +10,7 @@ import Animated, { FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
 
 import { FoodIcon, HeartIcon, PlusIcon, RunIcon, ScaleIcon } from '@/ui/icons';
 import { M3Pressable } from '@/ui/motion';
-import { colors, font, radius, space } from '@/ui/theme';
+import { colors, elevation, font, radius, space, themedStyles } from '@/ui/theme';
 
 const ACTIONS: { label: string; hint: string; href: Href; Icon: ComponentType<{ color: string; size?: number }> }[] = [
   { label: 'Morning check-in', hint: 'Energy, soreness, pain', href: '/log/checkin', Icon: HeartIcon },
@@ -88,7 +88,7 @@ export function QuickAddSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   overlay: { flex: 1 },
   backdrop: {
     ...StyleSheet.absoluteFill,
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: radius.pill,
     shadowColor: '#000',
-    shadowOpacity: 0.4,
+    shadowOpacity: elevation.shadowOpacity,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
     elevation: 10,
@@ -139,9 +139,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.45,
+    shadowOpacity: elevation.shadowOpacity,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
     elevation: 14,
   },
-});
+}));

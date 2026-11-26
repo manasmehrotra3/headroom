@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { getExercise } from '@/data/exercises';
 import type { SetRow } from '@/db/repos/workoutRepo';
@@ -7,7 +7,7 @@ import { totalVolumeKg } from '@/domain/strength/progression';
 import { formatDuration } from '@/domain/units';
 import { Body, Button, Card, Chips, SectionLabel, Title } from '@/ui/components';
 import { formatLb } from '@/ui/format';
-import { colors, font, space } from '@/ui/theme';
+import { colors, font, space, themedStyles } from '@/ui/theme';
 
 const RPE_OPTIONS = [4, 5, 6, 7, 8, 9, 10].map((n) => ({ id: String(n), label: String(n) }));
 
@@ -48,7 +48,7 @@ export function WorkoutSummary({ sets, startedAt, onFinish }: { sets: SetRow[]; 
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   name: { color: colors.text, fontSize: font.body, fontWeight: '600' },
   sets: { color: colors.textDim, fontSize: font.small },
-});
+}));

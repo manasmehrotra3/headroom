@@ -6,7 +6,7 @@ import { ensureMealPlan, groceryFor } from '@/db/repos/nutritionRepo';
 import { startOfWeek, todayKey } from '@/domain/dates';
 import { Body, Screen, Title } from '@/ui/components';
 import { formatShortDate } from '@/ui/format';
-import { colors, font, space, TAP_MIN } from '@/ui/theme';
+import { colors, font, space, TAP_MIN, themedStyles } from '@/ui/theme';
 
 /** Everything the week's meal plan needs, summed. Tick items off as you shop. */
 export default function GroceryScreen() {
@@ -51,9 +51,9 @@ export default function GroceryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   row: { minHeight: TAP_MIN, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: space.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   item: { color: colors.text, fontSize: font.body },
   qty: { color: colors.textDim, fontSize: font.body },
   ticked: { textDecorationLine: 'line-through', color: colors.textDim },
-});
+}));

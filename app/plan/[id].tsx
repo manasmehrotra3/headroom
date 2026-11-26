@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { TUNABLES } from '@/config/tunables';
 import { db } from '@/db/client';
@@ -18,7 +18,7 @@ import { lengthsOf } from '@/domain/swimming/workouts';
 import { beginWorkout, previewWorkout, templateName } from '@/features/workout/startWorkout';
 import { Body, Button, Card, Screen, SectionLabel, Title } from '@/ui/components';
 import { formatLb, formatLongDate } from '@/ui/format';
-import { colors, font, space } from '@/ui/theme';
+import { colors, font, space, themedStyles } from '@/ui/theme';
 
 const STATUS_NOTE: Partial<Record<string, string>> = {
   done: 'Done.',
@@ -250,10 +250,10 @@ export default function PlanDayScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: space.sm },
   name: { color: colors.text, fontSize: font.body, fontWeight: '600', flexShrink: 1 },
   sets: { color: colors.accent, fontSize: font.body, fontWeight: '600' },
   suggestion: { color: colors.textDim, fontSize: font.small },
   swap: { color: colors.info, fontSize: font.small },
-});
+}));

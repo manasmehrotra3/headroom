@@ -29,7 +29,7 @@ import { Body, Button, Card } from '@/ui/components';
 import { AnimatedLinearBar, segmentedCorners } from '@/ui/expressive';
 import { formatLb } from '@/ui/format';
 import { M3_LAYOUT, M3Pressable } from '@/ui/motion';
-import { colors, font, radius, space, TAP_MIN } from '@/ui/theme';
+import { colors, font, radius, space, TAP_MIN, themedStyles } from '@/ui/theme';
 
 export default function WorkoutPlayer() {
   useKeepAwake();
@@ -338,7 +338,7 @@ export default function WorkoutPlayer() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: space.lg, paddingBottom: space.xxl },
   headerWrap: {
@@ -387,4 +387,4 @@ const styles = StyleSheet.create({
   option: { minHeight: TAP_MIN, justifyContent: 'center', paddingHorizontal: space.lg, backgroundColor: colors.surface },
   optionName: { color: colors.onSurface, fontSize: font.body, fontWeight: '700' },
   optionSub: { color: colors.onSurfaceVariant, fontSize: font.small },
-});
+}));

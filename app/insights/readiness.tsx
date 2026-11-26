@@ -1,6 +1,6 @@
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { getCheckin, getDailyMetrics } from '@/db/repos/recoveryRepo';
 import { todayKey } from '@/domain/dates';
@@ -9,7 +9,7 @@ import { Chip } from '@/ui/cards';
 import { Body, Button, Card, Screen, SectionLabel } from '@/ui/components';
 import { AnimatedLinearBar, ScallopBadge, segmentedCorners } from '@/ui/expressive';
 import { M3Enter } from '@/ui/motion';
-import { colors, font, radius, space } from '@/ui/theme';
+import { colors, font, radius, space, themedStyles } from '@/ui/theme';
 
 const LABELS = { sleep: 'Sleep', restingHr: 'Resting heart rate', hrv: 'HRV', checkin: 'Morning check-in' } as const;
 
@@ -104,7 +104,7 @@ export default function ReadinessInsight() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   heroCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -125,4 +125,4 @@ const styles = StyleSheet.create({
   factorName: { color: colors.onSurface, fontSize: font.body, fontWeight: '700' },
   factorPts: { fontSize: font.small + 1, fontWeight: '800', fontVariant: ['tabular-nums'] },
   factorDetail: { color: colors.onSurfaceVariant, fontSize: font.small, lineHeight: 19 },
-});
+}));

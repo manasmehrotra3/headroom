@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, Text, View } from 'react-native';
 
 import youtube from '@/data/youtube.json';
 import type { Exercise } from '@/domain/strength/types';
-import { colors, font, radius, space } from '@/ui/theme';
+import { colors, font, radius, space, themedStyles } from '@/ui/theme';
 
 import { ExerciseFrames } from './ExerciseFrames';
 
@@ -55,7 +55,7 @@ export function ExerciseInfo({ exercise, compact = false }: { exercise: Exercise
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   station: { color: colors.textDim, fontSize: font.small, marginTop: space.sm },
   toggle: { paddingVertical: space.sm },
   toggleText: { color: colors.info, fontSize: font.body },
@@ -64,4 +64,4 @@ const styles = StyleSheet.create({
   body: { color: colors.text, fontSize: font.body, lineHeight: 22 },
   video: { marginTop: space.md, alignSelf: 'flex-start', paddingVertical: space.sm, paddingHorizontal: space.md, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border },
   videoText: { color: colors.info, fontSize: font.body },
-});
+}));

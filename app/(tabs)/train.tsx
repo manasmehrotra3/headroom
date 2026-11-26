@@ -20,7 +20,7 @@ import { Body, Button, Card, RowGroup, RowLink, Screen, SectionLabel } from '@/u
 import { ConnectedButtonGroup, segmentedCorners } from '@/ui/expressive';
 import { formatMonthDay } from '@/ui/format';
 import { M3Enter, M3Pressable } from '@/ui/motion';
-import { colors, font, radius, space, TAP_MIN } from '@/ui/theme';
+import { colors, font, radius, space, TAP_MIN, themedStyles } from '@/ui/theme';
 
 export default function TrainTab() {
   const today = todayKey();
@@ -224,10 +224,10 @@ export default function TrainTab() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   raceTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
   raceTitle: { color: colors.onTertiaryContainer, fontSize: font.body + 1, fontWeight: '800', flexShrink: 1 },
-  racePill: { backgroundColor: 'rgba(0,0,0,0.22)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill },
+  racePill: { backgroundColor: colors.scrimSoft, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill },
   racePillText: { color: colors.onTertiaryContainer, fontSize: font.caption + 1, fontWeight: '700' },
   raceMeta: { color: colors.onTertiaryContainer, opacity: 0.86, fontSize: font.small, lineHeight: 19 },
   resumeTitle: { color: colors.onPrimaryContainer, fontSize: font.body + 1, fontWeight: '700' },
@@ -250,4 +250,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   optionText: { color: colors.onSurface, fontSize: font.body, fontWeight: '600' },
-});
+}));

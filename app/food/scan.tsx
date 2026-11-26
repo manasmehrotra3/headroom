@@ -1,7 +1,7 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { addFood, getFood, logFood, type FoodRow } from '@/db/repos/nutritionRepo';
 import type { LogSlot } from '@/domain/nutrition/types';
@@ -9,7 +9,7 @@ import { todayKey } from '@/domain/dates';
 import { PortionSheet } from '@/features/food/PortionSheet';
 import { lookupBarcode } from '@/services/foodLookup';
 import { Body, Button, Screen } from '@/ui/components';
-import { colors, font, space } from '@/ui/theme';
+import { colors, font, space, themedStyles } from '@/ui/theme';
 
 /** Barcode → Open Food Facts → local food row → portion sheet. */
 export default function ScanScreen() {
@@ -79,8 +79,8 @@ export default function ScanScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   screen: { flex: 1, backgroundColor: colors.background },
   camera: { flex: 1 },
   status: { color: colors.text, fontSize: font.body, padding: space.lg, textAlign: 'center' },
-});
+}));

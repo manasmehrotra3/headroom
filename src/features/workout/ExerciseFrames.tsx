@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { Image, View } from 'react-native';
 
 import { EXERCISE_IMAGES } from '@/data/exerciseImages';
-import { colors, radius } from '@/ui/theme';
+import { colors, radius, themedStyles } from '@/ui/theme';
 
 /** Loops the two bundled frames (start / end position) so the movement reads as an animation. */
 export function ExerciseFrames({ image, height = 220 }: { image: string; height?: number }) {
@@ -26,7 +26,7 @@ export function ExerciseFrames({ image, height = 220 }: { image: string; height?
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   box: { width: '100%', borderRadius: radius.lg, overflow: 'hidden', backgroundColor: '#F4F4F4' },
   image: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', backgroundColor: colors.surface },
-});
+}));

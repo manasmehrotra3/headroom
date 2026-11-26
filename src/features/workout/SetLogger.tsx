@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
 
 import { rirToRpe, rpeToRir } from '@/domain/strength/progression';
 import type { Exercise } from '@/domain/strength/types';
@@ -7,7 +7,7 @@ import { kgToLb, lbToKg, roundTo } from '@/domain/units';
 import { Button, Stepper } from '@/ui/components';
 import { ConnectedButtonGroup } from '@/ui/expressive';
 import { M3Pressable, hapticSuccess } from '@/ui/motion';
-import { colors, font, radius, space } from '@/ui/theme';
+import { colors, font, radius, space, themedStyles } from '@/ui/theme';
 
 export interface SetInput {
   weightKg: number;
@@ -138,7 +138,7 @@ export function SetLogger({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   card: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: space.lg, marginBottom: space.md },
   heading: { color: colors.onSurfaceVariant, fontSize: font.small + 1, fontWeight: '700', marginBottom: space.md },
   fieldLabel: { color: colors.onSurfaceVariant, fontSize: font.small, fontWeight: '600', marginBottom: space.xs },
@@ -163,4 +163,4 @@ const styles = StyleSheet.create({
     marginBottom: space.md,
   },
   noteToggleText: { color: colors.onSurfaceVariant, fontSize: font.small, fontWeight: '600' },
-});
+}));

@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { recipeForDish } from '@/data/dishRecipes';
 import { getFood, ingredientsForFood, logFood, per100, servingsFor } from '@/db/repos/nutritionRepo';
@@ -10,7 +10,7 @@ import { Chip } from '@/ui/cards';
 import { Body, Button, Card, Screen, SectionLabel } from '@/ui/components';
 import { segmentedCorners } from '@/ui/expressive';
 import { M3Enter, M3Pressable, hapticSelect, hapticSuccess } from '@/ui/motion';
-import { colors, font, radius, space } from '@/ui/theme';
+import { colors, font, radius, space, themedStyles } from '@/ui/theme';
 
 function formatQty(qty: number, unit: string): string {
   if (unit === 'g' || unit === 'ml') {
@@ -203,7 +203,7 @@ export default function DishRecipeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   dishTitle: { color: colors.onSurface, fontSize: font.title, fontWeight: '800', letterSpacing: -0.3, marginTop: 2 },
   macroGrid: { flexDirection: 'row', gap: space.sm, marginTop: space.xs },
@@ -261,4 +261,4 @@ const styles = StyleSheet.create({
   stepText: { flex: 1, color: colors.onSurface, fontSize: font.body, lineHeight: 22 },
   tipTitle: { color: colors.onTertiaryContainer, fontSize: font.caption + 1, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8 },
   tipBody: { color: colors.onTertiaryContainer, fontSize: font.body, lineHeight: 21 },
-});
+}));

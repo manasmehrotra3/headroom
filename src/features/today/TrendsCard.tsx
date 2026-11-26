@@ -2,7 +2,7 @@
  * Trends card: M3 Expressive ConnectedButtonGroup range picker + swipeable Weight & Steps area charts.
  */
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import { ScrollView, Text, View, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 
 import { addDays, type DateKey } from '@/domain/dates';
 import { dayIndex, inRange, RANGE_DAYS, stepsSeries, TREND_RANGES, type DatedValue, type TrendRange } from '@/domain/trends';
@@ -11,7 +11,7 @@ import { weightTrend } from '@/domain/weightTrend';
 import { PagerDots, SegmentedControl } from '@/ui/cards';
 import { AreaTrendChart } from '@/ui/charts';
 import { formatCompact, formatMonth, formatMonthDay } from '@/ui/format';
-import { colors, font, radius, space } from '@/ui/theme';
+import { colors, font, radius, space, themedStyles } from '@/ui/theme';
 
 export function TrendsCard({
   today,
@@ -85,7 +85,7 @@ export function TrendsCard({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
@@ -97,4 +97,4 @@ const styles = StyleSheet.create({
   pageTitle: { color: colors.onSurface, fontSize: font.body, fontWeight: '700', marginBottom: space.xs },
   pageCaption: { color: colors.onSurfaceVariant, fontSize: font.small, fontWeight: '400' },
   pager: { alignItems: 'center', marginTop: space.sm },
-});
+}));

@@ -2,7 +2,7 @@ import { and, asc, desc, eq, gte, lte } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { TUNABLES } from '@/config/tunables';
 import { db } from '@/db/client';
@@ -34,7 +34,7 @@ import { PagedStatCards, SectionHeader, StatPair, type StatCardProps, type Tone 
 import { Body, Button, Card, Screen } from '@/ui/components';
 import { HeartIcon } from '@/ui/icons';
 import { M3Enter, M3Pressable } from '@/ui/motion';
-import { colors, font, radius, space } from '@/ui/theme';
+import { colors, font, radius, space, themedStyles } from '@/ui/theme';
 
 const ACWR_TONES: Record<AcwrLabel, Tone> = { low: 'neutral', sweet_spot: 'accent', caution: 'warning', high: 'danger', insufficient: 'neutral' };
 const READY_TONES: Record<ReadinessBand, Tone> = { good: 'accent', moderate: 'warning', low: 'danger', unknown: 'neutral' };
@@ -294,7 +294,7 @@ export default function TodayTab() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   tertiaryTitle: { color: colors.onTertiaryContainer, fontSize: font.body, fontWeight: '600', lineHeight: 22 },
   checkinBanner: {
     flexDirection: 'row',
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   checkinTitle: { color: colors.onPrimaryContainer, fontSize: font.body + 1, fontWeight: '800' },
   checkinSub: { color: colors.onPrimaryContainer, opacity: 0.82, fontSize: font.small - 1, marginTop: 1 },
   checkinPill: {
-    backgroundColor: 'rgba(0, 0, 0, 0.22)',
+    backgroundColor: colors.scrimSoft,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: radius.pill,
@@ -332,4 +332,4 @@ const styles = StyleSheet.create({
   },
   raceTitle: { color: colors.onTertiaryContainer, fontSize: font.body + 1, fontWeight: '800' },
   raceSub: { color: colors.onTertiaryContainer, opacity: 0.84, fontSize: font.small },
-});
+}));

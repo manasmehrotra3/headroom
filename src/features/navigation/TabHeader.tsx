@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { db } from '@/db/client';
@@ -16,7 +16,7 @@ import { greetingFor, initialOf } from '@/domain/greeting';
 import { ScallopBadge } from '@/ui/expressive';
 import { CalendarIcon, GearIcon, RestIcon, TodayIcon } from '@/ui/icons';
 import { M3Pressable } from '@/ui/motion';
-import { colors, font, radius, space } from '@/ui/theme';
+import { colors, font, radius, space, themedStyles } from '@/ui/theme';
 
 export function TabHeader({
   title,
@@ -111,7 +111,7 @@ function RoundButton({ label, onPress, children }: { label: string; onPress: () 
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -136,4 +136,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));

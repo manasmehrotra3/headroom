@@ -12,7 +12,7 @@ import { Body, Button, Card, Screen, SectionLabel, Title } from '@/ui/components
 import { ConnectedButtonGroup, segmentedCorners } from '@/ui/expressive';
 import { formatShortDate } from '@/ui/format';
 import { M3Pressable, hapticSuccess } from '@/ui/motion';
-import { colors, font, radius, space, TAP_MIN } from '@/ui/theme';
+import { colors, font, radius, space, TAP_MIN, themedStyles } from '@/ui/theme';
 
 /** The rotating 7-day Indian vegetarian meal plan: zero repeats per week, protein-base variety. */
 export default function MealPlanScreen() {
@@ -174,7 +174,7 @@ export default function MealPlanScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   slotLabel: { color: colors.primary, fontSize: font.caption, fontWeight: '700', letterSpacing: 0.8 },
   mealName: { color: colors.onSurface, fontSize: font.body + 1, fontWeight: '700' },
   leftover: { color: colors.tertiary, fontSize: font.small, fontWeight: '600' },
@@ -203,4 +203,4 @@ const styles = StyleSheet.create({
   option: { minHeight: TAP_MIN, justifyContent: 'center', paddingHorizontal: space.lg, paddingVertical: space.sm, backgroundColor: colors.surface },
   optionName: { color: colors.onSurface, fontSize: font.body, fontWeight: '700' },
   optionMeta: { color: colors.onSurfaceVariant, fontSize: font.small, marginTop: 2 },
-});
+}));

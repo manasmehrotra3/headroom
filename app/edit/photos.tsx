@@ -2,14 +2,14 @@ import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { desc } from 'drizzle-orm';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack } from 'expo-router';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, Text, View } from 'react-native';
 
 import { db } from '@/db/client';
 import { addProgressPhoto, deleteProgressPhoto } from '@/db/repos/photoRepo';
 import { progressPhotos } from '@/db/schema';
 import { Body, Button, Screen, Title } from '@/ui/components';
 import { formatShortDate } from '@/ui/format';
-import { colors, font, radius, space } from '@/ui/theme';
+import { colors, font, radius, space, themedStyles } from '@/ui/theme';
 
 /** Progress photos kept in the app's private folder. Never uploaded, not in backups. */
 export default function PhotosScreen() {
@@ -60,9 +60,9 @@ export default function PhotosScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   cell: { width: '48%' },
   image: { width: '100%', aspectRatio: 3 / 4, borderRadius: radius.md, backgroundColor: colors.surface },
   date: { color: colors.textDim, fontSize: font.small, marginTop: space.xs },
-});
+}));

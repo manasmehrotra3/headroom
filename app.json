@@ -6,7 +6,7 @@
     "scheme": "headroom",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "backgroundColor": "#101418",
     "ios": {
       "bundleIdentifier": "com.manasmehrotra.headroom",
